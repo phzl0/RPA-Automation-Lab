@@ -1,1 +1,51 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Controle IA | RPA Lab</title><style>body{font:16px system-ui;background:#0b1210;color:#e5f5ea;max-width:850px;margin:40px auto;padding:15px}a{color:#8be4a5;margin-right:20px}h1{color:#8be4a5}textarea,button,pre{padding:14px;border:1px solid #42654d;border-radius:8px;background:#15221c;color:white}textarea{width:95%;height:90px}button{background:#28613b;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><nav><a href="/">Pedidos</a><a href="/estoque">Estoque</a><a href="/controle">Controle IA</a></nav><h1>Interpretador de comandos — Gemini</h1><p>Esta aba interpreta e valida comandos, mas não os executa. Para executar, use a CLI com confirmação explícita.</p><textarea id="message" placeholder="Cadastre um mouse SKU M-01 com 20 unidades por R$ 50"></textarea><p><button id="interpret">Interpretar comando</button></p><pre id="result">Aguardando comando.</pre><script>document.getElementById('interpret').onclick=async()=>{const result=document.getElementById('result');result.textContent='Interpretando...';try{const r=await fetch('/controle/interpretar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:document.getElementById('message').value})});const data=await r.json();result.textContent=JSON.stringify(data,null,2)+(data.ready?'\n\nPara executar: python -m rpa.cli (repita o comando e confirme no terminal)':'\n\nComplete os campos faltantes e envie novamente.')}catch(e){result.textContent='Falha: '+e.message}};</script></body></html>
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Assistente IA | RPA Lab</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080d0b;color:#e4f4e9;font:15px/1.5 system-ui,sans-serif}
+header{padding:18px 24px;background:#111e17;border-bottom:1px solid #284733;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+a{color:#85e1a2;text-decoration:none;margin-right:15px}a:hover{text-decoration:underline}.shell{max-width:920px;margin:auto;padding:24px}
+h1{font-size:23px;margin:0}small{color:#9db3a4}.chat{height:min(64vh,650px);min-height:300px;overflow:auto;background:#0d1511;border:1px solid #294a36;border-radius:16px;padding:20px}
+.message{max-width:85%;padding:13px 16px;border-radius:14px;margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.user{margin-left:auto;background:#1b4630}.assistant{background:#19271f;border:1px solid #2b4b37}
+.meta{font-size:12px;opacity:.75;margin-bottom:5px}.composer{display:flex;gap:10px;margin-top:14px}
+textarea{flex:1;min-width:0;height:76px;resize:vertical;border:1px solid #37624a;background:#14231a;color:#effff2;border-radius:12px;padding:12px;font:inherit}
+button{border:0;border-radius:12px;padding:10px 20px;background:#29814c;color:white;cursor:pointer;font-weight:600}
+button:disabled{opacity:.5;cursor:wait}.summary{margin:12px 0;padding:14px;border:1px solid #42694e;border-radius:12px;background:#12261a}
+.summary strong{color:#90eeb0}.summary p{margin:5px 0}code{color:#a4f5bf}footer{margin-top:10px;color:#a4b8aa;font-size:12px}
+</style></head><body>
+<header><h1>Assistente IA <small>· RPA Automation Lab</small></h1><nav><a href="/">Pedidos</a><a href="/estoque">Estoque</a><a href="/controle">Chat IA</a></nav></header>
+<main class="shell">
+<section id="chat" class="chat" role="log" aria-live="polite"><div class="message assistant"><div class="meta">IA</div>Olá! Posso responder perguntas ou ajudar com pedidos e estoque. Nenhuma alteração será feita nesta tela.</div></section>
+<form id="form" class="composer"><textarea id="message" placeholder="Digite uma pergunta ou peça uma ação no ERP…" maxlength="4000" required></textarea><button id="send" type="submit">Enviar</button></form>
+<footer>Enter envia · Shift+Enter quebra a linha · Alterações exigem confirmação na CLI · Não insira dados reais neste ERP demonstrativo.</footer>
+</main>
+<script>
+const form=document.getElementById('form'), chat=document.getElementById('chat'), input=document.getElementById('message'), send=document.getElementById('send');
+const history=[];
+function message(role,text){const el=document.createElement('div');el.className='message '+(role==='Você'?'user':'assistant');const meta=document.createElement('div');meta.className='meta';meta.textContent=role;const body=document.createElement('div');body.textContent=text;el.append(meta,body);chat.append(el);chat.scrollTop=chat.scrollHeight;return body;}
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+form.addEventListener('submit',async e=>{
+  e.preventDefault();const value=input.value.trim();if(!value)return;
+  message('Você',value);input.value='';send.disabled=true;
+  const pending=message('IA','Consultando Gemini…');
+  try{
+    const response=await fetch('/controle/interpretar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:value,history:history.slice(-10)})});
+    const data=await response.json();
+    if(!response.ok||data.error){pending.textContent=data.error||'Falha ao consultar o assistente.';return;}
+    let answer=data.reply||'Entendido.';
+    if(data.kind==='rpa'&&data.command){
+      const cmd=data.command, names={pedido_id:'ID do pedido',cliente:'Cliente',produto:'Produto',quantidade:'Quantidade',valor_unitario:'Valor unitário',status:'Status',cep:'CEP',sku:'SKU',preco:'Preço'};
+      const missing=(cmd.missing||[]).map(x=>names[x]||x);
+      answer+='\n\nOperação: '+cmd.action.replaceAll('_',' ');
+      if(missing.length)answer+='\nObrigatórios pendentes: '+missing.join(', ');
+      if(cmd.action==='criar_pedido')answer+='\nOpcionais: status (padrão pendente), CEP (sem informar = NULL).';
+      answer+='\n\nPara executar use: python -m rpa.cli (confirme no terminal).';
+    }
+    pending.textContent=answer;
+    history.push({role:'user',text:value},{role:'model',text:answer});
+    if(history.length>10)history.splice(0,history.length-10);
+  }catch(err){pending.textContent='Não foi possível conectar ao ERP: '+err.message;}
+  finally{send.disabled=false;input.focus();chat.scrollTop=chat.scrollHeight;}
+});
+</script></body></html>
