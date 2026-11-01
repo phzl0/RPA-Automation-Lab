@@ -12,6 +12,7 @@ services:
       ERP_URL: http://127.0.0.1:5000
       ERP_HOST: 0.0.0.0
       PYTHONUNBUFFERED: "1"
+      RPA_HEADLESS: "1"
     ports:
       - "127.0.0.1:5000:5000"
     volumes:
