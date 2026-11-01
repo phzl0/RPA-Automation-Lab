@@ -59,11 +59,14 @@ As telas estão em:
 
 Após atualizar o repositório, execute `python -m pip install -r requirements.txt`.
 
-Configure a chave **somente no seu terminal**:
+Configure a chave local em `.env` (não envie ao GitHub):
 ```bash
-export GEMINI_API_KEY="SUA_CHAVE"
+cp -n .env.example .env
+nano .env
 ```
-Em outro terminal, ative o ambiente virtual e configure a chave novamente para a CLI. Alternativamente use um gerenciador de segredos; `.env` não é carregado automaticamente nesta versão.
+Defina `GEMINI_API_KEY` e `GEMINI_MODEL` no arquivo. O projeto carrega `.env` automaticamente via `python-dotenv`. O arquivo `.env.example` é apenas um modelo e não deve conter uma chave real.
+
+Para conferir a versão local, use `git pull --ff-only` e `grep -n 'Consultando Gemini' rpa/cli.py`.
 
 Inicie o ERP com `python -m erp.app`. Em outro terminal:
 ```bash
