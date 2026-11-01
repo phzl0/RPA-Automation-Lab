@@ -22,7 +22,10 @@ def create_app(test_config=None):
             pedido_id TEXT PRIMARY KEY, cliente TEXT NOT NULL, produto TEXT NOT NULL,
             quantidade INTEGER NOT NULL CHECK(quantidade > 0),
             valor_unitario REAL NOT NULL CHECK(valor_unitario >= 0),
-            status TEXT NOT NULL CHECK(status IN ('pendente','processando','concluido')))""")
+            status TEXT NOT NULL CHECK(status IN ('pendente','processando','concluido')), cep TEXT NULL)""")
+        cols = {row[1] for row in db.execute("PRAGMA table_info(pedidos)")}
+        if "cep" not in cols:
+            db.execute("ALTER TABLE pedidos ADD COLUMN cep TEXT NULL")
         db.execute("""CREATE TABLE IF NOT EXISTS estoque (
             sku TEXT PRIMARY KEY, produto TEXT NOT NULL,
             quantidade INTEGER NOT NULL CHECK(quantidade >= 0),
@@ -40,18 +43,63 @@ def create_app(test_config=None):
         cliente = request.form.get("cliente", "").strip()
         produto = request.form.get("produto", "").strip()
         status = request.form.get("status", "pendente").strip()
+        cep = request.form.get("cep", "").strip().replace("-", "")
         try:
             quantidade = int(request.form.get("quantidade", ""))
             valor = float(request.form.get("valor_unitario", ""))
-            if not pedido_id or not cliente or not produto or quantidade <= 0 or not 0 <= valor <= 100000000 or status not in ("pendente", "processando", "concluido"):
+            if not pedido_id or not cliente or not produto or quantidade <= 0 or not 0 <= valor <= 100000000 or (status not in ("pendente", "processando", "concluido") or (cep and (len(cep) != 8 or not cep.isdigit()))):
                 raise ValueError("Dados inválidos")
             with connect() as db:
-                db.execute("INSERT INTO pedidos VALUES (?,?,?,?,?,?)", (pedido_id, cliente, produto, quantidade, valor, status))
+                db.execute("INSERT INTO pedidos (pedido_id,cliente,produto,quantidade,valor_unitario,status,cep) VALUES (?,?,?,?,?,?,?)", (pedido_id, cliente, produto, quantidade, valor, status, cep or None))
             flash("Pedido cadastrado com sucesso.", "success")
         except sqlite3.IntegrityError:
             flash("Pedido já cadastrado ou dados inválidos.", "error")
         except (ValueError, OverflowError):
             flash("Verifique os campos informados.", "error")
+        return redirect(url_for("index"))
+
+    @app.post("/pedidos/atualizar")
+    def atualizar_pedido():
+        pedido_id = request.form.get("pedido_id", "").strip()
+        changes = {}
+        for field in ("cliente", "produto", "quantidade", "valor_unitario", "status", "cep"):
+            if field not in request.form:
+                continue
+            value = request.form[field].strip()
+            if field == "cep":
+                value = value.replace("-", "") or None
+                if value is not None and (len(value) != 8 or not value.isdigit()):
+                    flash("CEP inválido.", "error")
+                    return redirect(url_for("index"))
+            elif field == "quantidade":
+                try:
+                    value = int(value)
+                    if value <= 0: raise ValueError()
+                except ValueError:
+                    flash("Quantidade inválida.", "error")
+                    return redirect(url_for("index"))
+            elif field == "valor_unitario":
+                try:
+                    value = float(value)
+                    if not 0 <= value <= 100000000: raise ValueError()
+                except (ValueError, OverflowError):
+                    flash("Valor inválido.", "error")
+                    return redirect(url_for("index"))
+            elif field == "status":
+                if value not in ("pendente", "processando", "concluido"):
+                    flash("Status inválido.", "error")
+                    return redirect(url_for("index"))
+            elif not value:
+                flash("Campo obrigatório não pode ficar vazio.", "error")
+                return redirect(url_for("index"))
+            changes[field] = value
+        if not pedido_id or not changes:
+            flash("Informe ID e pelo menos um campo para atualizar.", "error")
+            return redirect(url_for("index"))
+        sql = "UPDATE pedidos SET " + ", ".join(f"{k}=?" for k in changes) + " WHERE pedido_id=?"
+        with connect() as db:
+            cursor = db.execute(sql, (*changes.values(), pedido_id))
+        flash("Pedido atualizado." if cursor.rowcount else "Pedido não encontrado.", "success" if cursor.rowcount else "error")
         return redirect(url_for("index"))
 
     @app.get("/estoque")
@@ -103,8 +151,10 @@ def create_app(test_config=None):
         message = str((request.get_json(silent=True) or {}).get("message", ""))[:2000]
         try:
             proposal = interpret(message)
+            if proposal["kind"] == "chat":
+                return jsonify({"kind": "chat", "reply": proposal["reply"]})
             validated = validate_command(proposal)
-            return jsonify(validated)
+            return jsonify({"kind": "rpa", "reply": proposal["reply"], "command": validated})
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400
 
