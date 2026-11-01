@@ -1,6 +1,7 @@
 """CLI conversacional com confirmação explícita para ações de escrita."""
 import argparse
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from rpa.interpreter import interpret, configured_model
@@ -87,7 +88,7 @@ def main():
                 say("IA >", "Operação cancelada. Nenhum dado foi alterado.")
                 continue
             try:
-                output = run_command(command, headless=args.headless)
+                output = run_command(command, headless=args.headless or os.getenv("RPA_HEADLESS") == "1")
                 say("RPA >", output)
                 log_result(command, "sucesso", output)
             except Exception as exc:
