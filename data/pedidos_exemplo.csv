@@ -1,0 +1,4 @@
+pedido_id,cliente,produto,quantidade,valor_unitario,status
+PED-001,Ana Silva,Teclado,2,89.90,pendente
+PED-002,Bruno Costa,Mouse,1,49.50,pendente
+PED-003,Carla Lima,Monitor,1,799.00,pendente
