@@ -12,7 +12,15 @@ def main():
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
     message = " ".join(args.message).strip() or input("O que deseja fazer? ").strip()
-    command = validate_command(interpret(message))
+    print("Consultando Gemini (limite de 15 segundos)...", flush=True)
+    try:
+        command = validate_command(interpret(message))
+    except KeyboardInterrupt:
+        print("\nConsulta cancelada pelo usuário.")
+        return
+    except Exception as exc:
+        print(f"Não foi possível interpretar o comando: {exc.__class__.__name__}: {str(exc)[:350]}")
+        return
     while command["missing"]:
         print("Campos faltantes:", ", ".join(command["missing"]))
         for field in command["missing"]:
