@@ -30,6 +30,9 @@ def interpret(message, *, history=None, client=None, sleep=time.sleep):
         raise ValueError("Digite uma mensagem.")
     if len(message) > 4000:
         raise ValueError("Mensagem muito longa.")
+    normalized = " ".join(message.casefold().strip().strip("!?.").split())
+    if normalized in ("oi", "olá", "ola", "bom dia", "boa tarde", "boa noite", "opa", "e aí", "e ai"):
+        return {"kind": "chat", "reply": "Olá! Como posso ajudar? Posso conversar normalmente ou ajudar com pedidos e estoque do ERP.", "action": None, "data": {}}
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if client is None and (not key or key == "coloque_sua_chave_aqui"):
         raise ValueError("Configure GEMINI_API_KEY no .env.")
@@ -78,6 +81,9 @@ def interpret(message, *, history=None, client=None, sleep=time.sleep):
     # Compatibilidade com respostas de testes/versões anteriores.
     if "kind" not in result:
         result["kind"] = "rpa" if result.get("action") in FIELDS else "chat"
+    if result["kind"] == "chat":
+        result["action"] = None
+        result["data"] = {}
     if result["kind"] == "rpa" and result.get("action") not in FIELDS:
         raise ValueError("Ação de ERP não permitida.")
     if result["kind"] not in ("chat", "rpa"):
