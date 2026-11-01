@@ -66,6 +66,8 @@ def create_app(test_config=None):
             if field not in request.form:
                 continue
             value = request.form[field].strip()
+            if not value:
+                continue
             if field == "cep":
                 value = value.replace("-", "") or None
                 if value is not None and (len(value) != 8 or not value.isdigit()):
