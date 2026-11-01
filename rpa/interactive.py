@@ -2,8 +2,10 @@ import os
 from datetime import datetime
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT / ".env")
 URL = os.getenv("ERP_URL", "http://127.0.0.1:5000").rstrip("/")
 
 def run_command(command, headless=False):
@@ -14,7 +16,7 @@ def run_command(command, headless=False):
         browser = p.chromium.launch(headless=headless)
         page = browser.new_page()
         try:
-            route = "/estoque" if action != "criar_pedido" else "/"
+            route = "/estoque" if action not in ("criar_pedido", "atualizar_pedido") else "/"
             page.goto(URL + route, wait_until="domcontentloaded", timeout=15000)
             if action == "criar_pedido":
                 if any(r.get_attribute("data-pedido-id") == data["pedido_id"] for r in page.locator("tr[data-pedido-id]").all()):
@@ -22,6 +24,8 @@ def run_command(command, headless=False):
                 for key in ("pedido_id", "cliente", "produto", "quantidade", "valor_unitario"):
                     page.locator('form[action="/pedidos"] [name="' + key + '"]').fill(data[key])
                 page.locator('form[action="/pedidos"] [name="status"]').select_option(data["status"])
+                if data.get("cep"):
+                    page.locator('form[action="/pedidos"] [name="cep"]').fill(data["cep"])
                 page.get_by_role("button", name="Salvar pedido").click()
                 rows = [r for r in page.locator("tr[data-pedido-id]").all() if r.get_attribute("data-pedido-id") == data["pedido_id"]]
                 if len(rows) != 1:
@@ -29,7 +33,32 @@ def run_command(command, headless=False):
                 cells = rows[0].locator("td").all_text_contents()
                 if cells[1] != data["cliente"] or cells[2] != data["produto"] or cells[3] != data["quantidade"] or cells[5] != data["status"]:
                     raise RuntimeError("Dados divergentes.")
+                if cells[6] != (data.get("cep") or "—"):
+                    raise RuntimeError("CEP divergente.")
                 return "Pedido cadastrado e conferido."
+            if action == "atualizar_pedido":
+                form = page.locator('form[action="/pedidos/atualizar"]')
+                form.locator('[name="pedido_id"]').fill(data["pedido_id"])
+                for key, value in data.items():
+                    if key == "pedido_id":
+                        continue
+                    if key == "cep" and value == "":
+                        form.locator('[name="limpar_cep"]').check()
+                    else:
+                        form.locator('[name="' + key + '"]').fill(value)
+                form.get_by_role("button", name="Atualizar").click()
+                rows = [r for r in page.locator("tr[data-pedido-id]").all() if r.get_attribute("data-pedido-id") == data["pedido_id"]]
+                if not rows:
+                    raise RuntimeError("Pedido não encontrado para atualização.")
+                cells = rows[0].locator("td").all_text_contents()
+                positions = {"cliente":1,"produto":2,"quantidade":3,"valor_unitario":4,"status":5,"cep":6}
+                for key, value in data.items():
+                    if key == "pedido_id":
+                        continue
+                    expected = "—" if key == "cep" and not value else value
+                    if cells[positions[key]] != expected:
+                        raise RuntimeError("Campo atualizado divergente: " + key)
+                return "Pedido atualizado e conferido."
             rows = [r for r in page.locator("tr[data-sku]").all() if r.get_attribute("data-sku") == data["sku"]]
             if action == "consultar_estoque":
                 if not rows:
