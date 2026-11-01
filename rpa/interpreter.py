@@ -23,7 +23,7 @@ def interpret(message):
         raise ValueError("GEMINI_API_KEY ausente. Configure no ambiente local.")
     from google import genai
     from google.genai import types
-    client = genai.Client(api_key=key)
+    client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=15000, retry_options=types.HttpRetryOptions(attempts=1)))
     response = client.models.generate_content(
         model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         contents=message,
