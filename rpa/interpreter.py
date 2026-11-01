@@ -25,7 +25,7 @@ def interpret(message):
     from google.genai import types
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         contents=message,
         config=types.GenerateContentConfig(system_instruction=SYSTEM, response_mime_type="application/json", temperature=0),
     )
