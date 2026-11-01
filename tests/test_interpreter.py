@@ -24,8 +24,11 @@ def test_valid_command():
     assert interpret("cadastrar pedido", client=Client(models))["action"] == "criar_pedido"
 
 def test_greeting_not_executed():
-    models = Models({"action": "nenhuma", "data": {}})
-    assert interpret("bom dia", client=Client(models))["kind"] == "chat"
+    models = Models({"action": "consultar_estoque", "data": {}})
+    reply = interpret("bom dia", client=Client(models))
+    assert reply["kind"] == "chat"
+    assert reply["action"] is None
+    assert models.calls == 0  # saudação simples não vai à API
 
 def test_malformed_json_shape():
     models = Models(["criar_pedido"])
