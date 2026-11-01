@@ -3,7 +3,7 @@
 Automação empresarial com **Python, Playwright e ERP demonstrativo local**. O robô cadastra pedidos pela interface gráfica, sem API de escrita.
 
 ## Status
-Etapas 1–4 implementadas em código; execução ponta a ponta depende de validação no ambiente com navegador. Testes unitários configurados para GitHub Actions. Etapa 5 (IA/MCP) não implementada.
+ERP, automação de pedidos, estoque e interpretação por Gemini implementados. MCP ainda não implementado. Teste ponta a ponta depende de execução local com Chromium e disponibilidade da API Gemini.
 
 ## Componentes
 - `erp/app.py`: Flask + SQLite, formulário e listagem de pedidos.
@@ -66,7 +66,7 @@ nano .env
 ```
 Defina `GEMINI_API_KEY` e `GEMINI_MODEL` no arquivo. O projeto carrega `.env` automaticamente via `python-dotenv`. O arquivo `.env.example` é apenas um modelo e não deve conter uma chave real.
 
-Para conferir a versão local, use `git pull --ff-only` e `grep -n 'Consultando Gemini' rpa/cli.py`.
+Para conferir a versão local, use `git pull --ff-only` e `grep -n 'Consultando Gemini' rpa/cli.py`. Diagnóstico seguro (não exibe a chave): `python -m rpa.diagnostico`. O comando lista modelos informados pela API para a chave configurada. Um modelo listado não garante capacidade disponível naquele instante. O interpretador faz até duas tentativas para erros HTTP temporários e informa falhas sem executar o RPA.
 
 Inicie o ERP com `python -m erp.app`. Em outro terminal:
 ```bash
@@ -76,7 +76,7 @@ Exemplo: `Cadastre o mouse SKU M-01, com 20 unidades a R$ 49,90`. O Gemini inter
 
 **Limitações importantes:** Não há memória conversacional entre comandos, nem incremento/decremento relativo de estoque; "adicionar mais 10" precisa de esclarecimento. A interface de chat interpreta e valida, mas a execução confirmada é feita pela CLI. O LLM depende da internet, da disponibilidade do Gemini e dos limites/custos de sua conta. Nunca coloque a chave no GitHub. O ERP não tem autenticação; use apenas localmente e com dados fictícios.
 
-**Testes:** `python -m pytest -q` valida regras e rotas básicas. Testes completos com Chromium e Gemini ainda precisam ser executados em um ambiente configurado.
+**Testes:** `python -m pytest -q` valida regras, rotas e respostas simuladas do interpretador; não exige chamadas reais ao Gemini. Testes completos com Chromium e Gemini ainda precisam ser executados em um ambiente configurado.
 
 ## Roadmap
 - [x] Estrutura e dependências
