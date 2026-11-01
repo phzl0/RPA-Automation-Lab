@@ -152,9 +152,14 @@ def create_app(test_config=None):
     def interpretar():
         from rpa.interpreter import interpret
         from rpa.commands import validate_command
-        message = str((request.get_json(silent=True) or {}).get("message", ""))[:2000]
+        payload = request.get_json(silent=True) or {}
+        message = str(payload.get("message", ""))[:4000]
+        history = payload.get("history", [])
+        if not isinstance(history, list):
+            history = []
+        history = [x for x in history[-10:] if isinstance(x, dict) and x.get("role") in ("user", "model") and isinstance(x.get("text"), str)]
         try:
-            proposal = interpret(message)
+            proposal = interpret(message, history=history)
             if proposal["kind"] == "chat":
                 return jsonify({"kind": "chat", "reply": proposal["reply"]})
             validated = validate_command(proposal)
