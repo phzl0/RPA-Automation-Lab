@@ -95,6 +95,8 @@ def create_app(test_config=None):
                 flash("Campo obrigatório não pode ficar vazio.", "error")
                 return redirect(url_for("index"))
             changes[field] = value
+        if request.form.get("limpar_cep") == "1":
+            changes["cep"] = None
         if not pedido_id or not changes:
             flash("Informe ID e pelo menos um campo para atualizar.", "error")
             return redirect(url_for("index"))
