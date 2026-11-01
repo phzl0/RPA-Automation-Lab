@@ -32,7 +32,7 @@ def test_greeting_not_executed():
 
 def test_malformed_json_shape():
     models = Models(["criar_pedido"])
-    with pytest.raises(ValueError, match="estrutura inválida"):
+    with pytest.raises(ValueError, match="Resposta inválida"):
         interpret("cadastrar pedido", client=Client(models))
 
 def test_no_network_for_empty_command():
