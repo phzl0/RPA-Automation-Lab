@@ -1,125 +1,100 @@
-# RPA Automation Lab
+# RPA Automation Lab — Docker
 
-Automação empresarial com **Python, Playwright e ERP demonstrativo local**. O robô cadastra pedidos pela interface gráfica, sem API de escrita.
+Projeto de aprendizado: **Flask + SQLite local + Gemini + Playwright**. ERP demonstrativo, controle de estoque, cadastro/atualização de pedidos, chat com IA e automação pela interface gráfica (sem API de gravação). **Não utilizar dados reais.**
 
-## Status
-ERP, automação de pedidos, estoque e interpretação por Gemini implementados. MCP ainda não implementado. Teste ponta a ponta depende de execução local com Chromium e disponibilidade da API Gemini.
+## Requisitos
+- Ubuntu com Docker Engine e Docker Compose plugin funcionando (`sudo docker compose version`)
+- Git para baixar atualizações
+- Internet para construir a imagem e chamar o Gemini
 
-## Componentes
-- `erp/app.py`: Flask + SQLite, formulário e listagem de pedidos.
-- `erp/templates/index.html`: interface escura com verde suave.
-- `rpa/robot.py`: leitura CSV/XLSX, validação, Playwright visível, verificação, duplicados, relatório e screenshots.
-- `data/pedidos_exemplo.csv`: três pedidos fictícios.
-- `tests/`: testes unitários; `.github/workflows/tests.yml`: CI.
+**Não é necessário** usar `.venv`, instalar Python ou instalar dependências com `sudo pip`. O `sudo` serve apenas para chamar o Docker se seu usuário ainda não tiver permissão no daemon. Não use `chmod 777` ou instale pacotes Python globalmente.
 
-## Ubuntu
+## Atualizar o computador e iniciar — Ubuntu
+
+Primeiro, pare servidores locais antigos iniciados com `python -m erp.app` e outras CLIs antigas. Em seu terminal, sem `.venv`:
+
 ```bash
-git clone https://github.com/phzl0/RPA-Automation-Lab.git
-cd RPA-Automation-Lab
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m playwright install chromium
-python -m pytest -q
+cd ~/Projetos/RPA-Automation-Lab
+deactivate 2>/dev/null || true
+git status --short
+git pull --ff-only
 ```
-Se necessário: `sudo apt install python3-venv` e `python -m playwright install --with-deps chromium`.
 
-**Terminal 1 — ERP:**
-```bash
-python -m erp.app
-```
-Acesse http://127.0.0.1:5000.
+Se houver conflito por alterações locais, preserve seus arquivos e resolva o conflito antes de continuar. O pull não substitui o arquivo `.env` ignorado pelo Git.
 
-**Terminal 2 — robô (com ambiente virtual ativado):**
-```bash
-python -m rpa.robot
-```
-O Chromium abre visivelmente. Veja os pedidos no ERP e o relatório em `reports/`. Execute novamente para verificar a detecção de duplicados. Use `--headless` para execução sem janela, e `--file caminho.xlsx` para Excel.
+Configure `.env` (somente uma vez):
 
-## Windows (PowerShell)
-```powershell
-git clone https://github.com/phzl0/RPA-Automation-Lab.git
-cd RPA-Automation-Lab
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m playwright install chromium
-.\.venv\Scripts\python.exe -m pytest -q
-```
-Em dois terminais distintos, execute `.\.venv\Scripts\python.exe -m erp.app` e `.\.venv\Scripts\python.exe -m rpa.robot`.
-
-## Confiabilidade e limites
-A chave única `pedido_id` no SQLite impede duplicações. O robô confere os dados pela tabela HTML e gera `reports/resultado_*.csv`; falhas geram capturas em `screenshots/`. O ERP é uma demonstração **sem autenticação** e deve permanecer acessível somente em `127.0.0.1`; nunca use dados reais. Não há mecanismo de recuperação automática após falhas complexas, nem testes E2E em CI nesta versão.
-
-
-## Gemini + estoque + controle (versão experimental)
-As telas estão em:
-- http://127.0.0.1:5000/ — pedidos
-- http://127.0.0.1:5000/estoque — cadastro, consulta e definição de quantidade absoluta
-- http://127.0.0.1:5000/controle — interpretação por Gemini, sem execução direta (por segurança)
-
-Após atualizar o repositório, execute `python -m pip install -r requirements.txt`.
-
-Configure a chave local em `.env` (não envie ao GitHub):
 ```bash
 cp -n .env.example .env
 nano .env
 ```
-Defina `GEMINI_API_KEY` e `GEMINI_MODEL=gemini-3.5-flash-lite` no arquivo. O projeto carrega `.env` automaticamente via `python-dotenv`. O arquivo `.env.example` é apenas um modelo e não deve conter uma chave real.
 
-Para conferir a versão local, use `git pull --ff-only` e `grep -n 'Consultando Gemini' rpa/cli.py`. Diagnóstico seguro (não exibe a chave): `python -m rpa.diagnostico`. O comando lista modelos informados pela API para a chave configurada. Um modelo listado não garante capacidade disponível naquele instante. O interpretador faz até duas tentativas para erros HTTP temporários e informa falhas sem executar o RPA.
+Exemplo (use sua chave real **apenas no .env local**, nunca no GitHub):
 
-Inicie o ERP com `python -m erp.app`. Em outro terminal:
-```bash
-python -m rpa.cli
-```
-Exemplo: `Cadastre o mouse SKU M-01, com 20 unidades a R$ 49,90`. O Gemini interpreta; Python valida; se faltar algum campo a CLI pergunta; você deve digitar exatamente `SIM` para o robô executar. Para consulta: `Consulte o estoque do SKU M-01`. Para ajuste absoluto: `Defina o estoque do SKU M-01 para 30 unidades`.
-
-**Limitações importantes:** Não há memória conversacional entre comandos, nem incremento/decremento relativo de estoque; "adicionar mais 10" precisa de esclarecimento. A interface de chat interpreta e valida, mas a execução confirmada é feita pela CLI. O LLM depende da internet, da disponibilidade do Gemini e dos limites/custos de sua conta. Nunca coloque a chave no GitHub. O ERP não tem autenticação; use apenas localmente e com dados fictícios.
-
-**Testes:** `python -m pytest -q` valida regras, rotas e respostas simuladas do interpretador; não exige chamadas reais ao Gemini. Testes completos com Chromium e Gemini ainda precisam ser executados em um ambiente configurado.
-
-## Roadmap
-- [x] Estrutura e dependências
-- [x] ERP local
-- [x] Robô de cadastro via navegador
-- [x] Validação, prevenção de duplicados, relatórios, logs e testes unitários
-- [ ] Teste E2E validado no Ubuntu e Windows
-- [x] Interpretador Gemini e controle via CLI (experimental)
-- [ ] Agente com MCP (futuro)
-
-
-## Chat conversacional e CEP opcional
-O modelo padrão é `gemini-3.5-flash-lite`. **Atualize também o arquivo local `.env`**:
 ```dotenv
+GEMINI_API_KEY=COLOQUE_SUA_CHAVE_AQUI
 GEMINI_MODEL=gemini-3.5-flash-lite
 ```
-A CLI `python -m rpa.cli` agora aceita perguntas gerais, mantém contexto recente durante a sessão e permite `/limpar` e `/sair`. Quando detectar uma operação ERP, pede campos obrigatórios e informa os opcionais; só executa gravações após confirmação `SIM`. Consultas de estoque não alteram dados.
 
-Pedidos novos exigem ID, cliente, produto, quantidade e valor unitário. Status (padrão pendente) e CEP são opcionais. CEP omitido é armazenado como `NULL`. A migração SQLite adiciona a coluna `cep` aos bancos existentes automaticamente ao iniciar o ERP. É possível atualizar um pedido existente pelo formulário `/pedidos/atualizar` ou via CLI; o comando `limpe o CEP do pedido P1` define `NULL`. Não há consulta automática de CEP nos Correios.
-
-Para testar:
-```bash
-git pull --ff-only
-python -m pip install -r requirements.txt
-python -m pytest -q
-python -m erp.app
-# outro terminal, no mesmo diretório com venv ativo:
-python -m rpa.cli
-```
-Se o ERP já estiver rodando, reinicie-o após o pull para aplicar a migração.
-
-
-## Verificação de versão local após atualizações
-Se o terminal ainda exibir `O que deseja fazer?`, você está executando código antigo. O CLI atual exibe `RPA AUTOMATION LAB` e `Você >`.
+**Inicie e recrie tudo pelo Docker**, inclusive uma imagem limpa:
 
 ```bash
-cd ~/Projetos/RPA-Automation-Lab
-source .venv/bin/activate
-git status --short
-git pull --ff-only
-python -m pip install -r requirements.txt
-python -m pytest -q
-python -c "import rpa.cli; print(rpa.cli.__file__)"
-python -c "from rpa.interpreter import interpret; print(interpret('bom dia'))"
+sudo bash scripts/docker-up.sh
 ```
-A saudação simples é atendida localmente sem consulta à API, e não pode pedir SKU. Se a interface web continuar antiga, encerre a instância anterior do Flask (`Ctrl+C` no terminal do servidor), reinicie com `python -m erp.app` e atualize o navegador com `Ctrl+Shift+R`. O CEP é criado por migração segura no SQLite na inicialização da versão atualizada do ERP. Não apague `erp.sqlite3` nem `.env` para atualizar.
+
+O script preserva os dados: se existir `erp.sqlite3` na raiz do projeto e ainda não existir `storage/erp.sqlite3`, copia o banco antigo. O novo banco é persistido em `./storage/erp.sqlite3`, no host. A migração do ERP adiciona a coluna `cep` sem apagar pedidos antigos. Os arquivos de `.env`, `storage`, `reports` e `screenshots` não entram na imagem.
+
+Abra **http://127.0.0.1:5000** para o ERP, **http://127.0.0.1:5000/estoque** para o estoque e **http://127.0.0.1:5000/controle** para o chat.
+
+## CLI interativa pelo Docker
+
+```bash
+sudo docker compose exec -it erp python -m rpa.cli
+```
+
+Exemplos: `bom dia`; `o que é RPA?`; `quero cadastrar um pedido`; `consulte o estoque do SKU M-01`. As conversas gerais não devem exigir SKU. Ao reconhecer uma operação ERP, a IA apresenta os campos obrigatórios e opcionais; gravações requerem `SIM` para confirmar. Use `/sair` para encerrar e `/limpar` para limpar o contexto da sessão.
+
+O Playwright roda com **Chromium headless** dentro do contêiner, sem abrir uma janela gráfica no Ubuntu; ele ainda interage com a interface web do ERP. Isso é intencional e dispensa configurar X11, DISPLAY ou servidores gráficos no host. Para executar o robô CSV:
+
+```bash
+sudo docker compose exec -T erp python -m rpa.robot
+```
+
+## Diagnóstico completo
+
+```bash
+sudo bash scripts/docker-check.sh
+```
+
+Valida os arquivos Python carregados **dentro do contêiner**, uma saudação que não depende do Gemini, a migração da coluna CEP e os testes `pytest`. Para consultar modelos disponíveis para sua chave:
+
+```bash
+sudo docker compose exec -T erp python -m rpa.diagnostico
+```
+
+Esse diagnóstico não publica a chave; disponibilidade de modelos ainda depende da API Google. Para ver logs:
+
+```bash
+sudo docker compose logs --tail=100 erp
+```
+
+## Banco local e persistência
+
+- Banco SQLite: `storage/erp.sqlite3` (arquivo local, persistido entre recriações)
+- Relatórios: `reports/`
+- Capturas de falha: `screenshots/`
+- Segredos: `.env` (não versionado)
+- Código: é copiado para a imagem no momento do build. **Qualquer atualização exige nova construção** com `sudo bash scripts/docker-up.sh`.
+- Só o endereço `127.0.0.1:5000` é publicado na máquina anfitriã; não há autenticação no ERP.
+
+Não rode `sudo docker compose down -v` para apagar volumes de propósito, nem exclua `storage/erp.sqlite3` se quiser manter os dados. `sudo docker compose down` para os serviços sem apagar a pasta `storage`.
+
+## Arquitetura
+
+`erp/app.py`: Flask e SQLite; `rpa/interpreter.py`: interpretação do Gemini; `rpa/commands.py`: validação de operações; `rpa/interactive.py`: interação com navegador Playwright; `rpa/cli.py`: conversa interativa e confirmação; `rpa/robot.py`: execução CSV/XLSX; `tests/`: testes automatizados.
+
+No novo pedido, `pedido_id`, cliente, produto, quantidade e valor unitário são obrigatórios. Status (padrão `pendente`) e CEP são opcionais; quando omitido, CEP fica `NULL`. Pode-se atualizar o CEP ou limpá-lo posteriormente. O ERP é um laboratório local, sem autenticação, e **o chat web não executa alterações diretamente**.
+
+## Estado dos testes
+
+Testes unitários e de integração Flask podem ser executados via `docker-check.sh`; não há garantia de teste ponta a ponta no ambiente do usuário nem de disponibilidade da API Gemini. Falhas HTTP 429/503 no Gemini não são resolvidas pelo Docker por si só.
