@@ -64,7 +64,7 @@ Configure a chave local em `.env` (não envie ao GitHub):
 cp -n .env.example .env
 nano .env
 ```
-Defina `GEMINI_API_KEY` e `GEMINI_MODEL` no arquivo. O projeto carrega `.env` automaticamente via `python-dotenv`. O arquivo `.env.example` é apenas um modelo e não deve conter uma chave real.
+Defina `GEMINI_API_KEY` e `GEMINI_MODEL=gemini-3.5-flash-lite` no arquivo. O projeto carrega `.env` automaticamente via `python-dotenv`. O arquivo `.env.example` é apenas um modelo e não deve conter uma chave real.
 
 Para conferir a versão local, use `git pull --ff-only` e `grep -n 'Consultando Gemini' rpa/cli.py`. Diagnóstico seguro (não exibe a chave): `python -m rpa.diagnostico`. O comando lista modelos informados pela API para a chave configurada. Um modelo listado não garante capacidade disponível naquele instante. O interpretador faz até duas tentativas para erros HTTP temporários e informa falhas sem executar o RPA.
 
@@ -86,3 +86,24 @@ Exemplo: `Cadastre o mouse SKU M-01, com 20 unidades a R$ 49,90`. O Gemini inter
 - [ ] Teste E2E validado no Ubuntu e Windows
 - [x] Interpretador Gemini e controle via CLI (experimental)
 - [ ] Agente com MCP (futuro)
+
+
+## Chat conversacional e CEP opcional
+O modelo padrão é `gemini-3.5-flash-lite`. **Atualize também o arquivo local `.env`**:
+```dotenv
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+A CLI `python -m rpa.cli` agora aceita perguntas gerais, mantém contexto recente durante a sessão e permite `/limpar` e `/sair`. Quando detectar uma operação ERP, pede campos obrigatórios e informa os opcionais; só executa gravações após confirmação `SIM`. Consultas de estoque não alteram dados.
+
+Pedidos novos exigem ID, cliente, produto, quantidade e valor unitário. Status (padrão pendente) e CEP são opcionais. CEP omitido é armazenado como `NULL`. A migração SQLite adiciona a coluna `cep` aos bancos existentes automaticamente ao iniciar o ERP. É possível atualizar um pedido existente pelo formulário `/pedidos/atualizar` ou via CLI; o comando `limpe o CEP do pedido P1` define `NULL`. Não há consulta automática de CEP nos Correios.
+
+Para testar:
+```bash
+git pull --ff-only
+python -m pip install -r requirements.txt
+python -m pytest -q
+python -m erp.app
+# outro terminal, no mesmo diretório com venv ativo:
+python -m rpa.cli
+```
+Se o ERP já estiver rodando, reinicie-o após o pull para aplicar a migração.
