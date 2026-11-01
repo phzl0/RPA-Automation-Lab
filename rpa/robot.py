@@ -112,4 +112,4 @@ if __name__ == "__main__":
     parser.add_argument("--url", default=os.getenv("ERP_URL", "http://127.0.0.1:5000"))
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
-    execute(args.file, args.url, args.headless)
+    execute(args.file, args.url, args.headless or os.getenv("RPA_HEADLESS") == "1")
