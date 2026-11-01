@@ -11,6 +11,7 @@ if [[ -f erp.sqlite3 && ! -e storage/erp.sqlite3 ]]; then
   cp erp.sqlite3 storage/erp.sqlite3
   echo "Banco SQLite anterior copiado para storage/erp.sqlite3."
 fi
+docker compose config --quiet
 docker compose build --pull --no-cache
 docker compose up -d --force-recreate --remove-orphans
 docker compose ps
