@@ -1,34 +1,18 @@
 # RPA Automation Lab
 
-> Laboratório de automação robótica de processos empresariais com Python e Playwright.
+Automação empresarial com **Python, Playwright e ERP demonstrativo local**. O robô cadastra pedidos pela interface gráfica, sem API de escrita.
 
-**Status:** Etapa 1 — estrutura inicial. O ERP e o robô ainda não foram implementados ou testados.
+## Status
+Etapas 1–4 implementadas em código; execução ponta a ponta depende de validação no ambiente com navegador. Testes unitários configurados para GitHub Actions. Etapa 5 (IA/MCP) não implementada.
 
-## Objetivo
-Ler pedidos fictícios de CSV/Excel, abrir um ERP local no navegador, cadastrar e conferir os registros pela interface e gerar relatórios de execução. O robô **não utilizará API para realizar cadastros**.
+## Componentes
+- `erp/app.py`: Flask + SQLite, formulário e listagem de pedidos.
+- `erp/templates/index.html`: interface escura com verde suave.
+- `rpa/robot.py`: leitura CSV/XLSX, validação, Playwright visível, verificação, duplicados, relatório e screenshots.
+- `data/pedidos_exemplo.csv`: três pedidos fictícios.
+- `tests/`: testes unitários; `.github/workflows/tests.yml`: CI.
 
-## Tecnologias
-- **Python 3.11+** — execução e validação de dados.
-- **Playwright** — automação visual do navegador.
-- **Flask** — aplicação web local para simular o ERP.
-- **openpyxl** — leitura de planilhas Excel.
-- **pytest** — testes automatizados.
-
-## Estrutura
-```text
-RPA-Automation-Lab/
-├── data/pedidos_exemplo.csv   # três pedidos fictícios
-├── erp/                       # ERP local (etapa 2)
-├── rpa/                       # robô Playwright (etapa 3)
-├── tests/                     # testes (etapa 4)
-├── reports/                   # relatórios gerados
-├── screenshots/               # evidências de falhas
-├── requirements.txt
-├── .env.example
-└── .gitignore
-```
-
-## Preparação no Ubuntu
+## Ubuntu
 ```bash
 git clone https://github.com/phzl0/RPA-Automation-Lab.git
 cd RPA-Automation-Lab
@@ -36,39 +20,40 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m playwright install chromium
+python -m pytest -q
 ```
-Se faltar suporte a venv: `sudo apt install python3-venv`. Em distribuições Linux que precisem de bibliotecas do Chromium, consulte `python -m playwright install --with-deps chromium` (pode exigir sudo).
+Se necessário: `sudo apt install python3-venv` e `python -m playwright install --with-deps chromium`.
 
-## Preparação no Windows (PowerShell)
+**Terminal 1 — ERP:**
+```bash
+python -m erp.app
+```
+Acesse http://127.0.0.1:5000.
+
+**Terminal 2 — robô (com ambiente virtual ativado):**
+```bash
+python -m rpa.robot
+```
+O Chromium abre visivelmente. Veja os pedidos no ERP e o relatório em `reports/`. Execute novamente para verificar a detecção de duplicados. Use `--headless` para execução sem janela, e `--file caminho.xlsx` para Excel.
+
+## Windows (PowerShell)
 ```powershell
 git clone https://github.com/phzl0/RPA-Automation-Lab.git
 cd RPA-Automation-Lab
 py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m playwright install chromium
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m playwright install chromium
+.\.venv\Scripts\python.exe -m pytest -q
 ```
-Caso a política do PowerShell bloqueie a ativação, use diretamente `.\.venv\Scripts\python.exe` para executar os comandos Python.
+Em dois terminais distintos, execute `.\.venv\Scripts\python.exe -m erp.app` e `.\.venv\Scripts\python.exe -m rpa.robot`.
 
-## Verificação inicial
-Após instalar as dependências:
-```bash
-python -c "import flask, playwright, openpyxl, pytest; print('Dependencias OK')"
-```
-Este comando verifica apenas a importação das bibliotecas. **Ainda não executa o ERP nem o RPA.**
-
-## Dados de exemplo
-`data/pedidos_exemplo.csv` contém três pedidos fictícios, com identificador, cliente, produto, quantidade, valor unitário e status. Valores usam ponto decimal.
+## Confiabilidade e limites
+A chave única `pedido_id` no SQLite impede duplicações. O robô confere os dados pela tabela HTML e gera `reports/resultado_*.csv`; falhas geram capturas em `screenshots/`. O ERP é uma demonstração **sem autenticação** e deve permanecer acessível somente em `127.0.0.1`; nunca use dados reais. Não há mecanismo de recuperação automática após falhas complexas, nem testes E2E em CI nesta versão.
 
 ## Roadmap
-- [x] Estrutura, dependências e dados de exemplo
-- [ ] ERP demonstrativo com cadastro e consulta de pedidos
-- [ ] Robô Playwright visível, leitura de CSV/Excel e conferência na interface
-- [ ] Validação, idempotência, logs, capturas, relatórios e testes
-- [ ] Integração opcional com agente de IA e MCP
-
-## Segurança
-Utilize somente dados fictícios. Não faça commit de arquivos `.env`, credenciais ou relatórios contendo dados sensíveis. A aplicação local deverá usar o endereço `127.0.0.1` por padrão.
-
-## Licença
-Ainda não definida.
+- [x] Estrutura e dependências
+- [x] ERP local
+- [x] Robô de cadastro via navegador
+- [x] Validação, prevenção de duplicados, relatórios, logs e testes unitários
+- [ ] Teste E2E validado no Ubuntu e Windows
+- [ ] Agente IA / MCP (futuro)
