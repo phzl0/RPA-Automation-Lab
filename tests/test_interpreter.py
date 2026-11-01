@@ -25,8 +25,7 @@ def test_valid_command():
 
 def test_greeting_not_executed():
     models = Models({"action": "nenhuma", "data": {}})
-    with pytest.raises(ValueError, match="Não identifiquei"):
-        interpret("bom dia", client=Client(models))
+    assert interpret("bom dia", client=Client(models))["kind"] == "chat"
 
 def test_malformed_json_shape():
     models = Models(["criar_pedido"])
