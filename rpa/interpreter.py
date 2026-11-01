@@ -1,5 +1,9 @@
 import json
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / '.env')
 from rpa.commands import FIELDS
 
 SYSTEM = """Você interpreta solicitações de ERP em português. Responda APENAS JSON no formato
