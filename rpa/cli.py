@@ -2,7 +2,7 @@ import argparse
 import json
 from datetime import datetime
 from pathlib import Path
-from rpa.interpreter import interpret
+from rpa.interpreter import interpret, configured_model
 from rpa.commands import validate_command
 from rpa.interactive import run_command
 
@@ -12,7 +12,7 @@ def main():
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
     message = " ".join(args.message).strip() or input("O que deseja fazer? ").strip()
-    print("Consultando Gemini (limite de 15 segundos)...", flush=True)
+    print(f"Consultando Gemini ({configured_model()}, até 2 tentativas de 15s)...", flush=True)
     try:
         command = validate_command(interpret(message))
     except KeyboardInterrupt:
@@ -21,11 +21,15 @@ def main():
     except Exception as exc:
         print(f"Não foi possível interpretar o comando: {exc.__class__.__name__}: {str(exc)[:350]}")
         return
-    while command["missing"]:
-        print("Campos faltantes:", ", ".join(command["missing"]))
-        for field in command["missing"]:
-            command["data"][field] = input(field + ": ").strip()
-        command = validate_command(command)
+    try:
+        while command["missing"]:
+            print("Campos faltantes:", ", ".join(command["missing"]))
+            for field in command["missing"]:
+                command["data"][field] = input(field + ": ").strip()
+            command = validate_command(command)
+    except (ValueError, KeyboardInterrupt, EOFError) as exc:
+        print(f"Cadastro interrompido ou dados inválidos: {exc}")
+        return
     print("Proposta:", json.dumps(command, ensure_ascii=False, indent=2))
     if input("Executar via navegador? Digite SIM: ").strip() != "SIM":
         print("Cancelado. Nenhuma ação executada.")
