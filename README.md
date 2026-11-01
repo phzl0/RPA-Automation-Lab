@@ -107,3 +107,19 @@ python -m erp.app
 python -m rpa.cli
 ```
 Se o ERP já estiver rodando, reinicie-o após o pull para aplicar a migração.
+
+
+## Verificação de versão local após atualizações
+Se o terminal ainda exibir `O que deseja fazer?`, você está executando código antigo. O CLI atual exibe `RPA AUTOMATION LAB` e `Você >`.
+
+```bash
+cd ~/Projetos/RPA-Automation-Lab
+source .venv/bin/activate
+git status --short
+git pull --ff-only
+python -m pip install -r requirements.txt
+python -m pytest -q
+python -c "import rpa.cli; print(rpa.cli.__file__)"
+python -c "from rpa.interpreter import interpret; print(interpret('bom dia'))"
+```
+A saudação simples é atendida localmente sem consulta à API, e não pode pedir SKU. Se a interface web continuar antiga, encerre a instância anterior do Flask (`Ctrl+C` no terminal do servidor), reinicie com `python -m erp.app` e atualize o navegador com `Ctrl+Shift+R`. O CEP é criado por migração segura no SQLite na inicialização da versão atualizada do ERP. Não apague `erp.sqlite3` nem `.env` para atualizar.
