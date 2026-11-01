@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ERP Demo | RPA Lab</title>
 <style>body{font:16px system-ui;background:#0b1210;color:#e5f5ea;margin:3rem auto;max-width:1000px;padding:0 1rem}h1{color:#8be4a5}form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;background:#15221c;padding:20px;border-radius:12px}label{display:grid;gap:6px}input,select,button{padding:10px;background:#0b1210;color:#e5f5ea;border:1px solid #42654d;border-radius:6px}button{background:#28613b;cursor:pointer}table{width:100%;border-collapse:collapse;margin-top:20px}td,th{border-bottom:1px solid #35513c;padding:10px;text-align:left}.success{color:#8be4a5}.error{color:#ff9e9e}</style></head>
-<body><h1>ERP Demonstrativo</h1><p>Cadastro de pedidos — ambiente local com dados fictícios.</p>
+<body><nav><a href="/" style="color:#8be4a5;margin-right:20px">Pedidos</a><a href="/estoque" style="color:#8be4a5;margin-right:20px">Estoque</a><a href="/controle" style="color:#8be4a5">Controle IA</a></nav><h1>ERP Demonstrativo</h1><p>Cadastro de pedidos — ambiente local com dados fictícios.</p>
 {% for category,message in get_flashed_messages(with_categories=true) %}<p role="alert" class="{{ category }}">{{ message }}</p>{% endfor %}
 <h2>Novo pedido</h2><form method="post" action="{{ url_for('cadastrar') }}">
 <label>ID<input name="pedido_id" required></label><label>Cliente<input name="cliente" required></label>
