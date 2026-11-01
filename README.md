@@ -50,10 +50,36 @@ Em dois terminais distintos, execute `.\.venv\Scripts\python.exe -m erp.app` e `
 ## Confiabilidade e limites
 A chave única `pedido_id` no SQLite impede duplicações. O robô confere os dados pela tabela HTML e gera `reports/resultado_*.csv`; falhas geram capturas em `screenshots/`. O ERP é uma demonstração **sem autenticação** e deve permanecer acessível somente em `127.0.0.1`; nunca use dados reais. Não há mecanismo de recuperação automática após falhas complexas, nem testes E2E em CI nesta versão.
 
+
+## Gemini + estoque + controle (versão experimental)
+As telas estão em:
+- http://127.0.0.1:5000/ — pedidos
+- http://127.0.0.1:5000/estoque — cadastro, consulta e definição de quantidade absoluta
+- http://127.0.0.1:5000/controle — interpretação por Gemini, sem execução direta (por segurança)
+
+Após atualizar o repositório, execute `python -m pip install -r requirements.txt`.
+
+Configure a chave **somente no seu terminal**:
+```bash
+export GEMINI_API_KEY="SUA_CHAVE"
+```
+Em outro terminal, ative o ambiente virtual e configure a chave novamente para a CLI. Alternativamente use um gerenciador de segredos; `.env` não é carregado automaticamente nesta versão.
+
+Inicie o ERP com `python -m erp.app`. Em outro terminal:
+```bash
+python -m rpa.cli
+```
+Exemplo: `Cadastre o mouse SKU M-01, com 20 unidades a R$ 49,90`. O Gemini interpreta; Python valida; se faltar algum campo a CLI pergunta; você deve digitar exatamente `SIM` para o robô executar. Para consulta: `Consulte o estoque do SKU M-01`. Para ajuste absoluto: `Defina o estoque do SKU M-01 para 30 unidades`.
+
+**Limitações importantes:** Não há memória conversacional entre comandos, nem incremento/decremento relativo de estoque; "adicionar mais 10" precisa de esclarecimento. A interface de chat interpreta e valida, mas a execução confirmada é feita pela CLI. O LLM depende da internet, da disponibilidade do Gemini e dos limites/custos de sua conta. Nunca coloque a chave no GitHub. O ERP não tem autenticação; use apenas localmente e com dados fictícios.
+
+**Testes:** `python -m pytest -q` valida regras e rotas básicas. Testes completos com Chromium e Gemini ainda precisam ser executados em um ambiente configurado.
+
 ## Roadmap
 - [x] Estrutura e dependências
 - [x] ERP local
 - [x] Robô de cadastro via navegador
 - [x] Validação, prevenção de duplicados, relatórios, logs e testes unitários
 - [ ] Teste E2E validado no Ubuntu e Windows
-- [ ] Agente IA / MCP (futuro)
+- [x] Interpretador Gemini e controle via CLI (experimental)
+- [ ] Agente com MCP (futuro)
