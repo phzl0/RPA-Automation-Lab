@@ -12,3 +12,5 @@ reports/*
 screenshots/*
 !screenshots/.gitkeep
 *.log
+storage/*
+!storage/.gitkeep
