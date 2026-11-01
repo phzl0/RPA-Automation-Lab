@@ -23,14 +23,14 @@ def collect(command):
     if action == "criar_pedido":
         print("  Status padrão: pendente | CEP vazio: NULL")
     if action == "atualizar_pedido" and command["missing"] == ["campo_para_atualizar"]:
-        print("  Diga qual campo deseja alterar (ex.: CEP, status, cliente).")
+        print("  Informe a alteração em uma nova mensagem, por exemplo: atualize o CEP do pedido P1 para 06454000.")
         return None
     for field in command["missing"]:
         data[field] = input(f"  {LABELS.get(field, field)}: ").strip()
     command = validate_command({"action": action, "data": data})
     if not command["ready"]:
         raise ValueError("Faltam campos obrigatórios.")
-    if action == "criar_pedido":
+    if action == "criar_pedido" and "cep" not in data:
         cep = input("  CEP (opcional; Enter = NULL): ").strip()
         if cep:
             data["cep"] = cep
