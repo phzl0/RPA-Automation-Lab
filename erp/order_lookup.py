@@ -19,12 +19,9 @@ def find_orders(db_path, reference, limit=20):
         records = [dict(r) for r in db.execute(
             "SELECT pedido_id,cliente,produto,quantidade,valor_unitario,status,cep FROM pedidos ORDER BY pedido_id LIMIT 2000"
         )]
-    exact_id = [r for r in records if normalize(r["pedido_id"]) == term]
-    if exact_id:
-        return exact_id
-    exact_client = [r for r in records if normalize(r["cliente"]) == term]
-    if exact_client:
-        return exact_client[:limit]
+    exact = [r for r in records if normalize(r["pedido_id"]) == term or normalize(r["cliente"]) == term]
+    if exact:
+        return exact[:limit]
     # Somente busca parcial, sem aproximação probabilística ou escolha silenciosa.
     partial = [r for r in records if term in normalize(r["cliente"]) or term in normalize(r["pedido_id"])]
     return partial[:limit]
