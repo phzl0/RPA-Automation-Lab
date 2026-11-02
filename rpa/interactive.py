@@ -16,7 +16,7 @@ def run_command(command, headless=False):
         browser = p.chromium.launch(headless=headless)
         page = browser.new_page(extra_http_headers={"X-RPA-Origin": "1"})
         try:
-            route = "/estoque" if action not in ("criar_pedido", "atualizar_pedido", "excluir_pedido") else "/"
+            route = "/estoque" if action not in ("criar_pedido", "atualizar_pedido", "excluir_pedido") else "/pedidos/gerenciar"
             page.goto(URL + route, wait_until="domcontentloaded", timeout=15000)
             if action == "criar_pedido":
                 if any(r.get_attribute("data-pedido-id") == data["pedido_id"] for r in page.locator("tr[data-pedido-id]").all()):
