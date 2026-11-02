@@ -16,10 +16,10 @@ Para operações ERP: {"kind":"rpa","reply":"mensagem breve e acolhedora","actio
 Ações permitidas: criar_pedido, atualizar_pedido, excluir_pedido, criar_produto, atualizar_produto, excluir_produto, definir_estoque, consultar_estoque, listar_pedidos, listar_produtos, resumo_erp.
 criar_pedido: pedido_id, cliente, produto, quantidade, valor_unitario, status, cep.
 atualizar_pedido: pedido_id e APENAS os campos que o usuário quer alterar; cep vazio significa limpar para NULL.
-criar_produto: sku, produto, quantidade, preco.\natualizar_produto: sku e apenas os campos a alterar: produto, quantidade, preco.\nexcluir_pedido: pedido_id, somente um registro explícito.\nexcluir_produto: sku, somente um registro explícito.\nlistar_pedidos/listar_produtos/resumo_erp: data vazio.
+criar_produto: sku, produto, quantidade, preco.\natualizar_produto: sku e apenas os campos a alterar: produto, quantidade, preco.\nexcluir_pedido: referência fornecida pelo usuário no campo referencia (ex.: "teste 10" pode ser nome do cliente); use pedido_id SOMENTE quando o usuário indicar explicitamente um ID. Não transforme nome de cliente em ID. O sistema pesquisará registros no banco e solicitará seleção/confirmação.\nexcluir_produto: sku, somente um registro explícito.\nlistar_pedidos/listar_produtos/resumo_erp: data vazio.
 definir_estoque: sku, quantidade ABSOLUTA.
 consultar_estoque: sku.
-Nunca invente IDs, clientes, produtos, preços, quantidades ou CEPs. Omita dados não informados.\nSe faltar dado obrigatório para criar, peça apenas o que falta. Nunca crie valores fictícios para contornar validação.\nQuando pedido for amplo (como apagar todos), responda como chat e explique que exclusão em massa não é autorizada.
+Nunca invente IDs, clientes, produtos, preços, quantidades ou CEPs. Não afirme que encontrou registros sem resultado de ferramenta de consulta. Omita dados não informados.\nSe faltar dado obrigatório para criar, peça apenas o que falta. Nunca crie valores fictícios para contornar validação.\nQuando pedido for amplo (como apagar todos), responda como chat e explique que exclusão em massa não é autorizada.
 Não trate saudações ou perguntas comuns como comandos ERP. Não inclua markdown, ações executadas ou confirmação falsa.
 """
 def configured_model():
