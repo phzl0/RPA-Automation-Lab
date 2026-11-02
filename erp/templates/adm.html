@@ -15,7 +15,7 @@
 <div class="split">
 <section class="card"><div class="section-title"><h2>Atividade recente</h2><a href="/auditoria">Ver todos →</a></div><div class="activity-list">
 {% for e in data.activity %}
-<div class="activity-item"><span class="activity-dot {{ 'rpa' if e.source=='rpa' else '' }} {{ 'error' if e.status=='erro' else '' }}"></span><div><strong>{{ e.action.replace('_',' ').capitalize() }}{% if e.entity_id %} · {{ e.entity_id }}{% endif %}</strong><div class="activity-meta">{{ e.actor_label }} · {{ e.entity_type }} · {{ e.status }}{% if e.detail %} · {{ e.detail[:75] }}{% endif %}</div></div><div class="activity-time">{{ e.occurred_at or '—' }}<br>UTC</div></div>
+<div class="activity-item"><span class="activity-dot {{ 'rpa' if e.source=='rpa' else '' }} {{ 'error' if e.status=='erro' else '' }}"></span><div><strong>{{ e.action.replace('_',' ').capitalize() }}{% if e.entity_id %} · {{ e.entity_id }}{% endif %}</strong><div class="activity-meta">{{ e.actor_label }} · {{ e.entity_type }} · {{ e.status }}{% if e.detail %} · {{ e.detail[:75] }}{% endif %}</div></div><div class="activity-time">{{ e.occurred_local or '—' }}<br>BRT</div></div>
 {% else %}<p class="muted">Nenhuma atividade registrada ainda. Novas operações manuais e do RPA serão exibidas aqui.</p>{% endfor %}
 </div></section>
 <section class="card"><div class="section-title"><h2>Acesso rápido</h2><span class="tag">WORKSPACE</span></div><div class="quick-links"><a class="quick-link" href="/pedidos/gerenciar">＋ Novo pedido</a><a class="quick-link" href="/estoque">＋ Novo produto</a><a class="quick-link" href="/controle">✧ Chat ADM</a><a class="quick-link" href="/auditoria">◷ Auditoria</a></div>
