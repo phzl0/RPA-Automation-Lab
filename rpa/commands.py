@@ -1,4 +1,5 @@
 from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 
 FIELDS = {
     "criar_pedido": ("pedido_id", "cliente", "produto", "quantidade", "valor_unitario", "status", "cep"),
@@ -43,6 +44,8 @@ def validate_command(proposal):
     if not isinstance(raw, dict):
         raise ValueError("Dados inválidos.")
     data = {key: str(raw[key]).strip() for key in FIELDS[action] if raw.get(key) is not None}
+    if action == "criar_pedido" and not data.get("pedido_id"):
+        data["pedido_id"] = "PED-" + uuid4().hex[:10].upper()
     if action == "criar_pedido" and not data.get("status"):
         data["status"] = "pendente"
     if action in ("atualizar_pedido", "atualizar_produto") and not any(k in data for k in FIELDS[action] if k != ("pedido_id" if action == "atualizar_pedido" else "sku")):
