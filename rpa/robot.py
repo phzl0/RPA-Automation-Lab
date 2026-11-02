@@ -74,8 +74,8 @@ def execute(source, url, headless=False):
                         results.append((order_id, "duplicado", "Já existe no ERP"))
                         continue
                     for field in ("pedido_id", "cliente", "produto", "quantidade", "valor_unitario"):
-                        page.locator(f'[name="{field}"]').fill(data[field])
-                    page.locator('[name="status"]').select_option(data["status"])
+                        page.locator(f'form[action="/pedidos"] [name="{field}"]').fill(data[field])
+                    page.locator('form[action="/pedidos"] [name="status"]').select_option(data["status"])
                     page.get_by_role("button", name="Salvar pedido").click()
                     page.get_by_role("heading", name="Gerenciar pedidos").wait_for()
                     matching = [r for r in page.locator("tr[data-pedido-id]").all() if r.get_attribute("data-pedido-id") == order_id]
