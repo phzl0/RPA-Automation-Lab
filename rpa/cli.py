@@ -8,6 +8,7 @@ from rpa.commands import validate_command, REQUIRED, OPTIONAL, LABELS
 from rpa.interactive import run_command
 from erp.chat_store import init_chat, new_conversation, list_conversations, get_messages, save_message, audit
 from erp.adm import rows, overview
+from erp.order_lookup import resolve_order
 
 def say(label, text):
     colors = {"IA >": "\033[92m", "RPA >": "\033[93m", "ERP >": "\033[96m", "Sistema >": "\033[91m"}
@@ -92,6 +93,26 @@ def main():
                 if cep:
                     command["data"]["cep"]=cep
                     command=validate_command(command)
+            if action=="excluir_pedido":
+                lookup=resolve_order(db_path,command["data"])
+                choices=[lookup["order"]] if lookup["status"]=="resolved" else lookup.get("candidates",[])
+                if not choices:
+                    say("Sistema >","Nenhum pedido encontrado para esta referência. Nenhuma alteração.")
+                    save_message(db_path,ident,"model",reply+" (pedido não encontrado)")
+                    continue
+                print("Pedidos encontrados no ERP:")
+                for i,item in enumerate(choices,1):
+                    print(f" {i}. ID: {item['pedido_id']} | Cliente: {item['cliente']} | Produto: {item['produto']} | Qtd: {item['quantidade']} | Valor: {item['valor_unitario']} | Status: {item['status']}")
+                if len(choices)>1:
+                    answer=input("Selecione o número exato do pedido (Enter cancela): ").strip()
+                    if not answer.isdigit() or not 1<=int(answer)<=len(choices):
+                        say("Sistema >","Seleção cancelada.")
+                        continue
+                    selected=choices[int(answer)-1]
+                else:
+                    selected=choices[0]
+                say("IA >","Confirme a identidade do registro: ID "+str(selected["pedido_id"])+" | cliente "+str(selected["cliente"]))
+                command=validate_command({"action":"excluir_pedido","data":{"pedido_id":selected["pedido_id"]}})
             print("Proposta:",json.dumps(command,ensure_ascii=False,indent=2))
             if action!="consultar_estoque" and input("Confirmar alteração no ERP? Digite SIM: ").strip()!="SIM":
                 say("Sistema >","Operação cancelada.")
