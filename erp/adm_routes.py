@@ -2,6 +2,7 @@
 from flask import Blueprint, current_app, jsonify, render_template, request
 from erp.chat_store import new_conversation, list_conversations, get_messages, save_message, delete_conversation, audit
 from erp.adm import rows, overview
+from erp.metrics import metrics, recent
 from erp.order_lookup import resolve_order, get_order
 
 adm = Blueprint("adm", __name__)
@@ -11,15 +12,21 @@ def path():
 
 @adm.get("/adm")
 def dashboard():
-    return render_template("adm.html", overview=overview(path()))
+    return render_template("adm.html", data=metrics(path()), section="dashboard", page_name="Dashboard")
 
 @adm.get("/pedidos/lista")
 def order_list():
-    return render_template("lista.html", heading="Pedidos", section="pedidos", fields=("pedido_id","cliente","produto","quantidade","valor_unitario","status","cep"), records=rows(path(),"pedidos"))
+    return render_template("lista.html", heading="Pedidos", section="pedidos", fields=("pedido_id","cliente","produto","quantidade","valor_unitario","status","cep"), records=rows(path(),"pedidos"), page_name="Pedidos")
 
 @adm.get("/produtos")
 def product_list():
-    return render_template("lista.html", heading="Produtos", section="produtos", fields=("sku","produto","quantidade","preco"), records=rows(path(),"estoque"))
+    return render_template("lista.html", heading="Produtos", section="produtos", fields=("sku","produto","quantidade","preco"), records=rows(path(),"estoque"), page_name="Produtos")
+
+
+@adm.get("/auditoria")
+def audit_page():
+    return render_template("auditoria.html", events=recent(path(), 100),
+                           section="auditoria", page_name="Auditoria")
 
 @adm.get("/api/conversations")
 def conversations():
