@@ -1,5 +1,6 @@
 """Rotas administrativas. Laboratório local, sem autenticação."""
 from flask import Blueprint, current_app, jsonify, render_template, request
+import os
 from erp.chat_store import new_conversation, list_conversations, get_messages, save_message, delete_conversation, audit
 from erp.adm import rows, overview
 from erp.metrics import metrics, recent
@@ -22,6 +23,12 @@ def order_list():
 def product_list():
     return render_template("lista.html", heading="Produtos", section="produtos", fields=("sku","produto","quantidade","preco"), records=rows(path(),"estoque"), page_name="Produtos")
 
+
+@adm.get("/configuracoes")
+def settings_page():
+    from rpa.interpreter import configured_model
+    return render_template("configuracoes.html", section="configuracoes", page_name="Configurações",
+                           model=configured_model(), db_name=os.path.basename(path()))
 
 @adm.get("/auditoria")
 def audit_page():
