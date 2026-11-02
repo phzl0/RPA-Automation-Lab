@@ -2,6 +2,7 @@
 from flask import Blueprint, current_app, jsonify, render_template, request
 from erp.chat_store import new_conversation, list_conversations, get_messages, save_message, delete_conversation, audit
 from erp.adm import rows, overview
+from erp.order_lookup import resolve_order, get_order
 
 adm = Blueprint("adm", __name__)
 
@@ -72,6 +73,16 @@ def chat():
     except Exception as exc:
         return jsonify({"error":str(exc)[:250]}),503
 
+@adm.post("/api/orders/resolve")
+def resolve_order_route():
+    from rpa.commands import validate_command
+    payload=request.get_json(silent=True) or {}
+    command=validate_command(payload.get("command"))
+    if command["action"]!="excluir_pedido":
+        return jsonify({"error":"Esta busca atende à exclusão de pedido."}),400
+    resolution=resolve_order(path(), command["data"])
+    return jsonify(resolution)
+
 @adm.post("/api/rpa/execute")
 def execute():
     from rpa.commands import validate_command
@@ -87,6 +98,19 @@ def execute():
         allowed=("criar_pedido","atualizar_pedido","excluir_pedido","criar_produto","atualizar_produto","excluir_produto","definir_estoque","consultar_estoque")
         if action not in allowed:
             return jsonify({"error":"Operação não autorizada."}),400
+        if action=="excluir_pedido":
+            # Em cada execução, revalide o pedido escolhido contra o banco real.
+            chosen=payload.get("selected_order")
+            if not isinstance(chosen,dict) or not chosen.get("pedido_id"):
+                return jsonify({"error":"Selecione e revise o pedido identificado antes de excluir."}),400
+            current=get_order(path(),chosen["pedido_id"])
+            if not current or any(current.get(k)!=chosen.get(k) for k in current):
+                return jsonify({"error":"Pedido não encontrado ou alterado desde a confirmação. Pesquise novamente."}),409
+            resolution=resolve_order(path(),command["data"])
+            candidates=[resolution["order"]] if resolution["status"]=="resolved" else resolution.get("candidates",[])
+            if not any(item["pedido_id"]==current["pedido_id"] for item in candidates):
+                return jsonify({"error":"Pedido selecionado não corresponde à referência pesquisada."}),409
+            command=validate_command({"action":"excluir_pedido","data":{"pedido_id":current["pedido_id"]}})
         if action != "consultar_estoque" and payload.get("confirm")!="SIM":
             return jsonify({"error":"Confirmação SIM obrigatória."}),400
         result=run_command(command,headless=True)
