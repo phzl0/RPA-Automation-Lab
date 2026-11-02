@@ -1,147 +1,187 @@
-# RPA Automation Lab — Docker
+# RPA Automation Lab — Beta
 
-Projeto de aprendizado: **Flask + SQLite local + Gemini + Playwright**, com painel ADM e histórico de conversas compartilhado entre CLI e web. ERP demonstrativo, controle de estoque, cadastro/atualização de pedidos, chat com IA e automação pela interface gráfica (sem API de gravação). **Não utilizar dados reais.**
+> **Projeto em fase beta.** ERP administrativo demonstrativo com RPA, chat com IA e histórico persistente. Desenvolvido para estudar automação de processos empresariais, interpretação de linguagem natural, Playwright e integração de sistemas. **Utilize somente dados fictícios.**
 
-## Requisitos
-- Ubuntu com Docker Engine e Docker Compose plugin funcionando (`sudo docker compose version`)
-- Git para baixar atualizações
-- Internet para construir a imagem e chamar o Gemini
+Aplicação local com **Python/Flask**, **SQLite**, **Playwright/Chromium**, **Gemini** e **Docker Compose**. Inclui dashboard ADM, pedidos, produtos, estoque, chat web/CLI, auditoria e execução assistida de tarefas administrativas.
 
-**Não é necessário** usar `.venv`, instalar Python ou instalar dependências com `sudo pip`. O `sudo` serve apenas para chamar o Docker se seu usuário ainda não tiver permissão no daemon. Não use `chmod 777` ou instale pacotes Python globalmente.
+## Comece aqui: executar no seu computador
 
-## Atualizar o computador e iniciar — Ubuntu
+**O projeto já está preparado para rodar integralmente pelo Docker.** Não é necessário instalar Python, Flask, Playwright ou Chromium no computador; a imagem é construída localmente a partir do `Dockerfile`. O `compose.yaml` inicia o ERP e mantém os dados no próprio computador.
 
-Primeiro, pare servidores locais antigos iniciados com `python -m erp.app` e outras CLIs antigas. Em seu terminal, sem `.venv`:
+Você precisa de **Git, Docker e Docker Compose**, acesso à internet na instalação e uma chave pessoal do Gemini para usar os recursos de IA. **O ERP e os formulários manuais podem ser usados sem uma chave funcional; o chat com Gemini não.**
+
+| Requisito | Finalidade |
+| --- | --- |
+| Git | Clonar e atualizar o código |
+| Docker Engine + Compose (Linux) / Docker Desktop (Windows) | Construir e executar o ambiente |
+| Chave Gemini | Interpretar mensagens no chat web e na CLI |
+| Porta local `5000` disponível | Abrir o ERP no navegador |
+
+A API Gemini é um serviço externo: disponibilidade, cotas e eventuais custos dependem da conta Google. Cada pessoa usa sua própria chave. O projeto não fornece créditos de API.
+
+### Linux / Ubuntu
+
+**1. Instale os requisitos.** Se ainda não tiver Docker, siga a [documentação oficial do Docker para Ubuntu](https://docs.docker.com/engine/install/ubuntu/), incluindo o plugin Docker Compose.
+
+Confira:
 
 ```bash
-cd ~/Projetos/RPA-Automation-Lab
-deactivate 2>/dev/null || true
-git status --short
-git pull --ff-only
+git --version
+sudo docker --version
+sudo docker compose version
 ```
 
-Se houver conflito por alterações locais, preserve seus arquivos e resolva o conflito antes de continuar. O pull não substitui o arquivo `.env` ignorado pelo Git.
+**2. Clone o projeto.** Se a pasta já existir, **não clone novamente**; siga a seção de atualização mais abaixo.
 
-Configure `.env` (somente uma vez):
+```bash
+mkdir -p ~/Projetos
+cd ~/Projetos
+git clone https://github.com/phzl0/RPA-Automation-Lab.git
+cd RPA-Automation-Lab
+```
+
+**3. Configure sua chave Gemini** (somente na primeira instalação):
 
 ```bash
 cp -n .env.example .env
 nano .env
 ```
 
-Exemplo (use sua chave real **apenas no .env local**, nunca no GitHub):
+Preencha no `.env`:
 
 ```dotenv
-GEMINI_API_KEY=COLOQUE_SUA_CHAVE_AQUI
+GEMINI_API_KEY=cole_sua_chave_aqui
 GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
-**Inicie e recrie tudo pelo Docker**, inclusive uma imagem limpa:
+Substitua a chave de exemplo pela sua. No Nano, salve com `Ctrl+O`, `Enter` e saia com `Ctrl+X`. **Nunca envie o `.env` ao GitHub** nem compartilhe a chave.
+
+**4. Construa e inicie pelo Docker:**
 
 ```bash
 sudo bash scripts/docker-up.sh
 ```
 
-O script preserva os dados: se existir `erp.sqlite3` na raiz do projeto e ainda não existir `storage/erp.sqlite3`, copia o banco antigo. O novo banco é persistido em `./storage/erp.sqlite3`, no host. A migração do ERP adiciona a coluna `cep` sem apagar pedidos antigos. Os arquivos de `.env`, `storage`, `reports` e `screenshots` não entram na imagem.
+O script valida o Compose, cria as pastas persistentes, copia o antigo `erp.sqlite3` para `storage/` se necessário e ainda não houver banco nesse local, **reconstrói a imagem sem cache** e inicia o ERP. A primeira execução baixa as dependências e o navegador Chromium.
 
-Abra **http://127.0.0.1:5000/** (ou **http://127.0.0.1:5000/adm**) para o painel ADM, **http://127.0.0.1:5000/pedidos/lista** para pedidos, **http://127.0.0.1:5000/produtos** para produtos, **http://127.0.0.1:5000/pedidos/gerenciar** para cadastro manual, **http://127.0.0.1:5000/estoque** para estoque manual e **http://127.0.0.1:5000/controle** para o chat ADM.
+**5. Confira se iniciou:**
 
-## CLI interativa pelo Docker
+```bash
+sudo docker compose ps
+sudo docker compose logs --tail=50 erp
+```
+
+Abra **[http://127.0.0.1:5000](http://127.0.0.1:5000)**. A página inicial é o Dashboard ADM. Você **não precisa abrir um terminal para iniciar o Flask**; o contêiner faz isso automaticamente.
+
+### Windows — PowerShell
+
+**1. Instale** [Git para Windows](https://git-scm.com/downloads/win) e [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) com o mecanismo de **contêineres Linux** habilitado (WSL 2, quando aplicável).
+
+Abra o Docker Desktop e aguarde o mecanismo iniciar. Depois, em um novo PowerShell:
+
+```powershell
+git --version
+docker --version
+docker compose version
+```
+
+**2. Baixe o código:**
+
+```powershell
+git clone https://github.com/phzl0/RPA-Automation-Lab.git
+cd RPA-Automation-Lab
+```
+
+**3. Crie seu `.env` local e abra para edição:**
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Preencha `GEMINI_API_KEY` e mantenha um `GEMINI_MODEL` válido para a sua conta. Não publique a chave.
+
+**4. Construa e inicie os serviços:** no Windows use **Docker Compose diretamente**, sem `sudo` e sem executar scripts Bash:
+
+```powershell
+New-Item -ItemType Directory -Force storage, reports, screenshots | Out-Null
+docker compose up --build -d
+docker compose ps
+docker compose logs --tail=50 erp
+```
+
+Se estiver migrando uma instalação antiga, copie seu `erp.sqlite3` para `storage/erp.sqlite3` **antes** de iniciar, desde que não exista banco no destino. Nunca sobrescreva um banco já em uso.
+
+**5. Abra [http://127.0.0.1:5000](http://127.0.0.1:5000).** Mantenha o Docker Desktop iniciado durante o uso.
+
+## Telas disponíveis
+
+| Módulo | Endereço | O que faz |
+| --- | --- | --- |
+| Dashboard | [localhost:5000](http://127.0.0.1:5000/) | KPIs, pedidos recentes, alertas de estoque, atividades |
+| Pedidos | [localhost:5000/pedidos/lista](http://127.0.0.1:5000/pedidos/lista) | Consultar e filtrar pedidos |
+| Gerenciar pedidos | [localhost:5000/pedidos/gerenciar](http://127.0.0.1:5000/pedidos/gerenciar) | Cadastrar, editar e excluir manualmente |
+| Produtos | [localhost:5000/produtos](http://127.0.0.1:5000/produtos) | Consultar e filtrar produtos |
+| Estoque | [localhost:5000/estoque](http://127.0.0.1:5000/estoque) | Cadastrar produtos, alterar quantidades, editar e excluir |
+| Chat ADM | [localhost:5000/controle](http://127.0.0.1:5000/controle) | Conversar com IA, pesquisar registros e aprovar ações RPA |
+| Auditoria | [localhost:5000/auditoria](http://127.0.0.1:5000/auditoria) | Consultar alterações, origem, status e horários |
+| Configurações | [localhost:5000/configuracoes](http://127.0.0.1:5000/configuracoes) | Visualizar informações do ambiente local |
+
+O layout administrativo usa sidebar vertical, perfil ADM **demonstrativo**, tema escuro com detalhes neon e componentes compartilhados.
+
+## Como testar o RPA e a IA
+
+O **chat web** está em `/controle`. Ele mantém conversas no SQLite, interpreta solicitações pelo Gemini, exibe resultados encontrados no banco e solicita aprovação antes de executar alterações.
+
+Exemplos de mensagens:
+
+- `Bom dia`
+- `Mostre os pedidos cadastrados`
+- `Quantos produtos estão no estoque?`
+- `Cadastre um pedido para Ana, 2 mouses de R$ 50 cada`
+- `Exclua o pedido do cliente teste 10`
+
+Na exclusão por nome, o sistema pesquisa os pedidos, mostra os registros encontrados e pede que você selecione e confirme o ID correto. Não faz exclusão em massa. O robô utiliza o **Playwright no Chromium headless**, preenchendo formulários do ERP mesmo sem abrir uma janela gráfica no computador.
+
+### Chat pelo terminal (CLI)
+
+No **Linux/Ubuntu**, abra outro terminal na pasta do repositório:
 
 ```bash
 sudo docker compose exec -it erp python -m rpa.cli
 ```
 
-Exemplos: `bom dia`; `o que é RPA?`; `quero cadastrar um pedido`; `consulte o estoque do SKU M-01`. A CLI permite retomar conversas anteriores armazenadas no mesmo SQLite do chat do site. A interface web permite criar, abrir e excluir históricos. As conversas gerais não devem exigir SKU. Ao reconhecer uma operação ERP, a IA apresenta os campos obrigatórios e opcionais; gravações requerem `SIM` para confirmar. Use `/sair` para encerrar e `/limpar` para limpar o contexto da sessão.
+No **Windows/PowerShell**:
 
-O Playwright roda com **Chromium headless** dentro do contêiner, sem abrir uma janela gráfica no Ubuntu; ele ainda interage com a interface web do ERP. Isso é intencional e dispensa configurar X11, DISPLAY ou servidores gráficos no host. Para executar o robô CSV:
+```powershell
+docker compose exec erp python -m rpa.cli
+```
+
+O CLI oferece acesso a conversas persistidas anteriormente, `/nova` para criar outra sessão, `/historico` para ver mensagens e `/sair` para encerrar. Alterações pedem a confirmação `SIM`; consultas não precisam de confirmação de gravação.
+
+### Automação por CSV/XLSX
+
+Um arquivo de exemplo está em `data/pedidos_exemplo.csv`. Execute:
+
+**Linux:**
 
 ```bash
 sudo docker compose exec -T erp python -m rpa.robot
 ```
 
-## Diagnóstico completo
+**Windows:**
 
-```bash
-sudo bash scripts/docker-check.sh
+```powershell
+docker compose exec -T erp python -m rpa.robot
 ```
 
-Valida os arquivos Python carregados **dentro do contêiner**, uma saudação que não depende do Gemini, a migração da coluna CEP e os testes `pytest`. Para consultar modelos disponíveis para sua chave:
+Os resultados ficam em `reports/`. Capturas de falhas ficam em `screenshots/`. O robô verifica duplicidades e confere registros na interface.
 
-```bash
-sudo docker compose exec -T erp python -m rpa.diagnostico
-```
+## Atualizar uma instalação existente
 
-Esse diagnóstico não publica a chave; disponibilidade de modelos ainda depende da API Google. Para ver logs:
+**Antes de atualizar:** salve alterações locais de código. O arquivo `.env` e o banco SQLite são ignorados pelo Git e não devem ser apagados.
 
-```bash
-sudo docker compose logs --tail=100 erp
-```
-
-## Banco local e persistência
-
-- Banco SQLite: `storage/erp.sqlite3` (arquivo local, persistido entre recriações)
-- Relatórios: `reports/`
-- Capturas de falha: `screenshots/`
-- Segredos: `.env` (não versionado)
-- Código: é copiado para a imagem no momento do build. **Qualquer atualização exige nova construção** com `sudo bash scripts/docker-up.sh`.
-- Só o endereço `127.0.0.1:5000` é publicado na máquina anfitriã; não há autenticação no ERP.
-
-Não rode `sudo docker compose down -v` para apagar volumes de propósito, nem exclua `storage/erp.sqlite3` se quiser manter os dados. `sudo docker compose down` para os serviços sem apagar a pasta `storage`.
-
-## Arquitetura
-
-`erp/app.py`: Flask e SQLite; `rpa/interpreter.py`: interpretação do Gemini; `rpa/commands.py`: validação de operações; `rpa/interactive.py`: interação com navegador Playwright; `rpa/cli.py`: conversa interativa e confirmação; `rpa/robot.py`: execução CSV/XLSX; `tests/`: testes automatizados.
-
-No novo pedido, `pedido_id`, cliente, produto, quantidade e valor unitário são obrigatórios. Status (padrão `pendente`) e CEP são opcionais; quando omitido, CEP fica `NULL`. Pode-se atualizar o CEP ou limpá-lo posteriormente. O ERP é um laboratório local, sem autenticação; o chat web permite enviar operações validadas ao Playwright após confirmação explícita.
-
-## Estado dos testes
-
-Testes unitários e de integração Flask podem ser executados via `docker-check.sh`; não há garantia de teste ponta a ponta no ambiente do usuário nem de disponibilidade da API Gemini. Falhas HTTP 429/503 no Gemini não são resolvidas pelo Docker por si só.
-
-
-## Painel ADM experimental, permissões e histórico
-O banco persiste as tabelas `chat_conversations`, `chat_messages` e `rpa_audit`. O chat do navegador e a CLI compartilham o mesmo histórico, mas não usam credenciais de administradores (não existem usuários nem login nesta demonstração). O site permite ver o painel, pedidos, produtos, cadastrar manualmente e conversar com o Gemini. No chat web, ações de RPA completas podem ser revisadas e executadas sem repetir comandos no terminal. O robô utiliza Playwright no Chromium headless e os formulários reais do ERP.
-
-Operações reconhecidas: `criar_pedido`, `atualizar_pedido`, `excluir_pedido`, `criar_produto`, `atualizar_produto`, `excluir_produto`, `definir_estoque`, `consultar_estoque`, `listar_pedidos`, `listar_produtos`, `resumo_erp`. Ações de leitura usam consultas limitadas e aprovadas ao SQLite; alterações e exclusões utilizam Playwright. **Nenhuma execução de SQL arbitrário ou exclusão em massa foi concedida à IA.**
-
-**Limite importante:** permissão para executar ações administrativas não significa permissão para inventar dados. O cadastro de pedido ainda precisa de cliente, produto, quantidade e preço; o ID técnico é gerado automaticamente se omitido, enquanto status e CEP são opcionais; o sistema pode aproveitar dados fornecidos em linguagem natural e pedir apenas os que faltam. Gravações precisam de confirmação `SIM` na CLI, ou confirmação explícita no navegador. Ações ficam registradas em `rpa_audit`, mas exclusões não contam com lixeira/undo.
-
-⚠ **NÃO É SEGURO PARA PRODUÇÃO.** Sem autenticação, autorização por usuário, CSRF, segregação de dados, backups e auditoria antifraude, não exponha a porta na internet nem use dados reais. A interface inclui alerta propositalmente destacado. Para um ambiente real, implemente login, RBAC, confirmação de exclusões com reautenticação, transações e logs externos.
-
-Após baixar novas alterações, execute `sudo bash scripts/docker-up.sh` para reconstruir a imagem Docker e reiniciar o ERP. Execute `sudo bash scripts/docker-check.sh` para validar os testes. A disponibilidade do Gemini depende da API Google, não do Docker.
-
-
-## Resolução de pedidos por nome e confirmação visual própria
-
-Exemplo: `exclua o pedido teste 10`, quando o cliente `teste 10` pertence ao pedido de ID `10`.
-
-1. Gemini identifica a intenção e envia uma referência textual, sem presumir que ela é o ID.
-2. O backend pesquisa em SQLite por ID e nome de cliente, priorizando coincidências exatas. Se houver várias correspondências, apresenta os pedidos para seleção manual.
-3. O Chat ADM exibe uma **janela de confirmação do próprio sistema** (sem `window.confirm()`) mostrando o ID real, o cliente, o produto, o valor, a quantidade e o status.
-4. O servidor confere novamente a identidade e os dados do pedido selecionado no SQLite antes de enviar o ID resolvido ao Playwright. Se houver mudança, rejeita e exige nova pesquisa.
-5. O Playwright interage com o formulário real de exclusão e com o diálogo interno do ERP; confere em seguida que o registro desapareceu.
-
-O mesmo tipo de confirmação interna substitui os alertas de exclusão dos formulários manuais. A CLI também consulta o banco e permite selecionar o pedido encontrado, mantendo a confirmação textual `SIM`.
-
-**Limites:** consulta parcial (sem correspondência fonética/semântica avançada), até 20 resultados por busca, busca restrita aos primeiros 2.000 pedidos do laboratório. A exclusão não ocorre se o pedido não for encontrado. Não há exclusão em massa. Consultas e confirmação são realizadas sobre dados reais; o Gemini não deve inventar registros encontrados.
-
-Após atualizar com `git pull --ff-only origin main`, recrie o Docker usando `sudo bash scripts/docker-up.sh`, rode `sudo bash scripts/docker-check.sh` e atualize o navegador com `Ctrl+Shift+R`.
-
-
-## Upgrade de interface administrativa (Dark Neon)
-
-A URL raiz `http://127.0.0.1:5000/` agora redireciona para o **Dashboard ADM**. Todos os módulos renderizam o template reutilizável `erp/templates/base.html` e o tema compartilhado `erp/static/admin.css` (preto grafite, ciano, violeta, toques neon). A navegação é vertical à esquerda, com perfil ADM demonstrativo, topbar, status local e relógio.
-
-**Navegação:** Dashboard `/adm` · Pedidos `/pedidos/lista` · Produtos `/produtos` · Estoque `/estoque` · Chat ADM `/controle` · Auditoria `/auditoria` · Configurações `/configuracoes` · Gerenciar pedidos manualmente `/pedidos/gerenciar`.
-
-**Dashboard conectado ao SQLite:** total de pedidos, valor bruto (quantidade × preço), produtos, estoque baixo (≤5), pedidos pendentes e concluídos, conversas salvas, ações manuais, execuções e falhas RPA; últimos pedidos, monitor de estoque, atividades recentes e atalhos rápidos. O filtro de texto nas listagens de pedidos/produtos funciona no navegador.
-
-**Rastreabilidade:** `erp/metrics.py` cria automaticamente a tabela `activity_log` no SQLite existente e registra cadastros, alterações e exclusões manuais concluídos. As execuções do RPA aparecem por meio da tabela preexistente `rpa_audit`, separadas da atividade manual. Os registros são armazenados em UTC e apresentados no horário de Brasília (`America/Sao_Paulo`), com origem, status e detalhes. As atividades anteriores à implementação da auditoria manual não podem ser reconstruídas retroativamente. Não existe identidade real de operador: `ADM (manual)` e `RPA (assistido)` são rótulos de origem, não contas autenticadas.
-
-**Compatibilidade do robô:** o Playwright para pedidos foi atualizado para o caminho `/pedidos/gerenciar` e os campos do robô CSV/XLSX foram delimitados ao formulário correto; as rotas de gravação existentes continuam disponíveis. O SQLite e o histórico de conversas continuam persistidos em `storage/erp.sqlite3`.
-
-Para atualizar no Ubuntu, sem `.venv`:
+### Linux
 
 ```bash
 cd ~/Projetos/RPA-Automation-Lab
@@ -151,6 +191,131 @@ sudo bash scripts/docker-up.sh
 sudo bash scripts/docker-check.sh
 ```
 
-Se `git pull` acusar modificações locais, guarde-as antes de atualizar; não use `git reset --hard` nem apague `storage/erp.sqlite3`. Após reconstruir, atualize o navegador com `Ctrl+Shift+R`.
+### Windows — PowerShell
 
-O sistema permanece **exclusivamente um laboratório**: sem autenticação ou perfis reais, sem proteções completas contra CSRF, e sem restauração automática após exclusões. Não use em produção.
+```powershell
+cd RPA-Automation-Lab
+git status --short
+git pull --ff-only origin main
+docker compose up --build -d --force-recreate
+docker compose exec -T erp python -m pytest -q
+```
+
+Se o Git mostrar `Your local changes would be overwritten`, **não use `git reset --hard`**. Preserve suas modificações antes de repetir o pull. Em caso de erro na porta, confirme se outra aplicação está usando `5000`. Após a atualização, recarregue o navegador com `Ctrl+Shift+R`.
+
+**Importante:** o script Ubuntu usa `--no-cache` para forçar uma compilação limpa. É mais demorado, mas evita reutilizar camadas antigas durante a fase beta. Para desenvolvimento normal, `docker compose up --build -d` costuma ser mais rápido.
+
+## Verificações e solução de problemas
+
+### Linux
+
+```bash
+sudo bash scripts/docker-check.sh
+sudo docker compose ps
+sudo docker compose logs --tail=100 erp
+```
+
+### Windows
+
+```powershell
+docker compose ps
+docker compose exec -T erp python -m pytest -q
+docker compose logs --tail=100 erp
+```
+
+O diagnóstico testa a inicialização, os arquivos Python, o banco, a coluna CEP, rotas do painel, métricas e testes automatizados. Ele **não garante** uma chamada real bem-sucedida ao Gemini nem a execução ponta a ponta em cada máquina.
+
+Para consultar a disponibilidade de modelos do Gemini no Linux:
+
+```bash
+sudo docker compose exec -T erp python -m rpa.diagnostico
+```
+
+Se a IA retornar erros HTTP 401/403, verifique a chave/permissões; 404 pode indicar modelo indisponível; 429 ou 503 podem refletir limites ou indisponibilidade temporária do Google. Não publique a chave ao pedir suporte.
+
+### Parar e reiniciar
+
+**Linux:**
+
+```bash
+sudo docker compose stop
+sudo docker compose start
+```
+
+**Windows:**
+
+```powershell
+docker compose stop
+docker compose start
+```
+
+Para remover os contêineres sem excluir os diretórios persistidos, use `docker compose down` (com `sudo` no Linux, se necessário). Não apague `storage/erp.sqlite3` se quiser preservar pedidos, produtos, conversas e histórico.
+
+## Como o projeto funciona
+
+```text
+Administrador
+    ├── Navegador: Dashboard / Pedidos / Produtos / Chat ADM
+    └── CLI: conversa e comandos administrativos
+                 |
+                 v
+          Gemini (interpretação)
+                 |
+                 v
+      Python: validação e consultas
+                 |
+           Confirmação humana
+                 |
+                 v
+        Playwright / Chromium
+                 |
+                 v
+        Formulários do ERP Flask
+                 |
+                 v
+         SQLite persistido
+```
+
+A **IA interpreta a intenção**, o **Python consulta e valida os dados reais**, e o **RPA executa ações na interface**. Não é necessário MCP para esse fluxo. O Chat ADM não permite SQL arbitrário nem exclusão em massa.
+
+| Arquivo / pasta | Responsabilidade |
+| --- | --- |
+| `Dockerfile` e `compose.yaml` | Imagem, serviço local, persistência e porta |
+| `erp/app.py` | Rotas do ERP e formulários manuais |
+| `erp/adm_routes.py` | Rotas do painel ADM e chat |
+| `erp/metrics.py` | Indicadores e atividades |
+| `erp/order_lookup.py` | Busca de pedidos por ID/cliente |
+| `erp/chat_store.py` | Histórico persistente de conversas |
+| `erp/templates/` e `erp/static/` | Interface dark/neon |
+| `rpa/interpreter.py` | Interpretação de solicitações por Gemini |
+| `rpa/commands.py` | Validação dos comandos |
+| `rpa/interactive.py` | Operações Playwright na interface |
+| `rpa/cli.py` | Chat administrativo no terminal |
+| `rpa/robot.py` | Importação e automação CSV/XLSX |
+| `tests/` | Testes automatizados |
+
+## Banco, dados locais e segurança
+
+O arquivo `storage/erp.sqlite3` armazena pedidos, produtos, conversas e eventos. `reports/` e `screenshots/` guardam os resultados locais da automação. A chave da API fica em `.env`, fora do repositório.
+
+A interface apresenta o perfil `ADM`, mas **ainda não existe login nem controle de permissões por usuário**. Na auditoria, `ADM (manual)` e `RPA (assistido)` indicam o canal, **não a identidade autenticada de uma pessoa**. Novas atividades são registradas com horários; eventos manuais anteriores à implantação do log não podem ser reconstruídos.
+
+**Este projeto é um laboratório, não um ERP de produção.** Não utilize dados reais, não exponha a porta à internet e não trate confirmações visuais como substitutas de autenticação, autorização, proteção contra CSRF, backups e recuperação de exclusões.
+
+## Status do projeto
+
+- [x] Docker Compose e banco local persistente
+- [x] Painel ADM dark/neon com dashboard e módulos
+- [x] CRUD manual de pedidos e produtos
+- [x] Chat web + CLI com histórico no SQLite
+- [x] Interpretação pelo Gemini e execução via Playwright
+- [x] Busca de pedidos por nome/ID e confirmação visual
+- [x] Auditoria de operações recentes
+- [x] Testes automatizados no repositório
+- [ ] Validação E2E completa em Linux/Windows com Gemini real
+- [ ] Login, perfis e autorizações
+- [ ] Backups/restauração automatizados e segurança para produção
+
+---
+
+**Licença de uso e contribuições:** consulte os arquivos de licença e configuração do repositório. Este projeto permanece experimental.
