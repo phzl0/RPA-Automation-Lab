@@ -16,7 +16,7 @@ def run_command(command, headless=False):
         browser = p.chromium.launch(headless=headless)
         page = browser.new_page()
         try:
-            route = "/estoque" if action not in ("criar_pedido", "atualizar_pedido") else "/"
+            route = "/estoque" if action not in ("criar_pedido", "atualizar_pedido", "excluir_pedido") else "/"
             page.goto(URL + route, wait_until="domcontentloaded", timeout=15000)
             if action == "criar_pedido":
                 if any(r.get_attribute("data-pedido-id") == data["pedido_id"] for r in page.locator("tr[data-pedido-id]").all()):
@@ -59,6 +59,43 @@ def run_command(command, headless=False):
                     if cells[positions[key]] != expected:
                         raise RuntimeError("Campo atualizado divergente: " + key)
                 return "Pedido atualizado e conferido."
+            if action == "excluir_pedido":
+                rows=[r for r in page.locator("tr[data-pedido-id]").all() if r.get_attribute("data-pedido-id")==data["pedido_id"]]
+                if len(rows)!=1:
+                    raise ValueError("Pedido não encontrado; nada foi excluído.")
+                form=page.locator('form[action="/pedidos/excluir"]')
+                form.locator('[name="pedido_id"]').fill(data["pedido_id"])
+                page.once("dialog",lambda dialog: dialog.accept())
+                form.get_by_role("button", name="Excluir pedido").click()
+                if any(r.get_attribute("data-pedido-id")==data["pedido_id"] for r in page.locator("tr[data-pedido-id]").all()):
+                    raise RuntimeError("Exclusão não confirmada na interface.")
+                return "Pedido excluído e conferido: "+data["pedido_id"]
+            if action == "excluir_produto":
+                rows=[r for r in page.locator("tr[data-sku]").all() if r.get_attribute("data-sku")==data["sku"]]
+                if len(rows)!=1:
+                    raise ValueError("Produto não encontrado; nada foi excluído.")
+                form=page.locator('form[action="/estoque/excluir"]')
+                form.locator('[name="sku"]').fill(data["sku"])
+                page.once("dialog",lambda dialog: dialog.accept())
+                form.get_by_role("button", name="Excluir produto").click()
+                if any(r.get_attribute("data-sku")==data["sku"] for r in page.locator("tr[data-sku]").all()):
+                    raise RuntimeError("Exclusão não confirmada na interface.")
+                return "Produto excluído e conferido: "+data["sku"]
+            if action == "atualizar_produto":
+                form=page.locator('form[action="/estoque/editar"]')
+                form.locator('[name="sku"]').fill(data["sku"])
+                for key,value in data.items():
+                    if key!="sku":
+                        form.locator('[name="'+key+'"]').fill(value)
+                form.get_by_role("button", name="Atualizar produto").click()
+                rows=[r for r in page.locator("tr[data-sku]").all() if r.get_attribute("data-sku")==data["sku"]]
+                if len(rows)!=1:
+                    raise ValueError("Produto não encontrado para atualização.")
+                cells=rows[0].locator("td").all_text_contents()
+                for key,pos in (("produto",1),("quantidade",2),("preco",3)):
+                    if key in data and cells[pos]!=data[key]:
+                        raise RuntimeError("Valor divergente na interface: "+key)
+                return "Produto atualizado e conferido: "+data["sku"]
             rows = [r for r in page.locator("tr[data-sku]").all() if r.get_attribute("data-sku") == data["sku"]]
             if action == "consultar_estoque":
                 if not rows:
