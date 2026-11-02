@@ -31,6 +31,13 @@ def create_app(test_config=None):
             quantidade INTEGER NOT NULL CHECK(quantidade >= 0),
             preco REAL NOT NULL CHECK(preco >= 0 AND preco <= 100000000))""")
 
+    from erp.metrics import initialize as init_activity, record as record_activity
+    init_activity(app.config["DATABASE"])
+
+    def track(action, kind, ident, detail="", changed=True):
+        if changed and request.headers.get("X-RPA-Origin") != "1":
+            record_activity(app.config["DATABASE"], action, kind, ident, detail)
+
     from erp.chat_store import init_chat
     from erp.adm_routes import adm
     init_chat(app.config["DATABASE"])
@@ -40,7 +47,7 @@ def create_app(test_config=None):
     def index():
         with connect() as db:
             pedidos = db.execute("SELECT * FROM pedidos ORDER BY pedido_id").fetchall()
-        return render_template("index.html", pedidos=pedidos)
+        return render_template("index.html", pedidos=pedidos, section="cadastro", page_name="Gerenciar pedidos")
 
     @app.post("/pedidos")
     def cadastrar():
@@ -56,6 +63,7 @@ def create_app(test_config=None):
                 raise ValueError("Dados inválidos")
             with connect() as db:
                 db.execute("INSERT INTO pedidos (pedido_id,cliente,produto,quantidade,valor_unitario,status,cep) VALUES (?,?,?,?,?,?,?)", (pedido_id, cliente, produto, quantidade, valor, status, cep or None))
+            track("criar_pedido", "pedido", pedido_id, "Cliente: " + cliente)
             flash("Pedido cadastrado com sucesso.", "success")
         except sqlite3.IntegrityError:
             flash("Pedido já cadastrado ou dados inválidos.", "error")
@@ -108,6 +116,7 @@ def create_app(test_config=None):
         sql = "UPDATE pedidos SET " + ", ".join(f"{k}=?" for k in changes) + " WHERE pedido_id=?"
         with connect() as db:
             cursor = db.execute(sql, (*changes.values(), pedido_id))
+        track("atualizar_pedido", "pedido", pedido_id, "Campos: " + ", ".join(changes), bool(cursor.rowcount))
         flash("Pedido atualizado." if cursor.rowcount else "Pedido não encontrado.", "success" if cursor.rowcount else "error")
         return redirect(url_for("index"))
 
@@ -115,7 +124,7 @@ def create_app(test_config=None):
     def estoque():
         with connect() as db:
             produtos = db.execute("SELECT * FROM estoque ORDER BY sku").fetchall()
-        return render_template("estoque.html", produtos=produtos)
+        return render_template("estoque.html", produtos=produtos, section="estoque", page_name="Estoque")
 
     @app.post("/estoque")
     def cadastrar_produto():
@@ -128,6 +137,7 @@ def create_app(test_config=None):
                 raise ValueError()
             with connect() as db:
                 db.execute("INSERT INTO estoque VALUES (?,?,?,?)", (sku, produto, quantidade, preco))
+            track("criar_produto", "produto", sku, "Produto: " + produto)
             flash("Produto cadastrado.", "success")
         except sqlite3.IntegrityError:
             flash("SKU já cadastrado.", "error")
@@ -144,6 +154,7 @@ def create_app(test_config=None):
                 raise ValueError()
             with connect() as db:
                 result = db.execute("UPDATE estoque SET quantidade=? WHERE sku=?", (quantidade, sku))
+            track("definir_estoque", "produto", sku, "Quantidade: " + str(quantidade), bool(result.rowcount))
             flash("Estoque atualizado." if result.rowcount else "SKU não encontrado.", "success" if result.rowcount else "error")
         except (ValueError, OverflowError):
             flash("Quantidade inválida.", "error")
@@ -157,6 +168,7 @@ def create_app(test_config=None):
             return redirect(url_for("index"))
         with connect() as db:
             changed=db.execute("DELETE FROM pedidos WHERE pedido_id=?",(ident,)).rowcount
+        track("excluir_pedido", "pedido", ident, "Exclusão manual", bool(changed))
         flash("Pedido excluído." if changed else "Pedido não encontrado.","success" if changed else "error")
         return redirect(url_for("index"))
 
@@ -184,6 +196,7 @@ def create_app(test_config=None):
             return redirect(url_for("estoque"))
         with connect() as db:
             changed=db.execute("UPDATE estoque SET "+",".join(k+"=?" for k in changes)+" WHERE sku=?",(*changes.values(),sku)).rowcount
+        track("atualizar_produto", "produto", sku, "Campos: " + ", ".join(changes), bool(changed))
         flash("Produto atualizado." if changed else "SKU não encontrado.","success" if changed else "error")
         return redirect(url_for("estoque"))
 
@@ -195,12 +208,13 @@ def create_app(test_config=None):
             return redirect(url_for("estoque"))
         with connect() as db:
             changed=db.execute("DELETE FROM estoque WHERE sku=?",(sku,)).rowcount
+        track("excluir_produto", "produto", sku, "Exclusão manual", bool(changed))
         flash("Produto excluído." if changed else "SKU não encontrado.","success" if changed else "error")
         return redirect(url_for("estoque"))
 
     @app.get("/controle")
     def controle():
-        return render_template("controle.html")
+        return render_template("controle.html", section="chat", page_name="Chat ADM")
 
     @app.post("/controle/interpretar")
     def interpretar():
