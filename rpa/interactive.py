@@ -14,7 +14,7 @@ def run_command(command, headless=False):
         raise ValueError("Comando incompleto.")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
-        page = browser.new_page()
+        page = browser.new_page(extra_http_headers={"X-RPA-Origin": "1"})
         try:
             route = "/estoque" if action not in ("criar_pedido", "atualizar_pedido", "excluir_pedido") else "/"
             page.goto(URL + route, wait_until="domcontentloaded", timeout=15000)
