@@ -37,7 +37,7 @@ def test_dashboard_shows_true_kpis_and_activity(env):
     assert "150.00" in html
     assert "Monitor" in html
     assert "ADM (manual)" in html
-    assert "UTC" in html
+    assert "BRT" in html
 
 def test_manual_updates_and_deletes_tracked(env):
     client,db=env
@@ -57,6 +57,6 @@ def test_rpa_header_does_not_fake_manual_actor(env):
 def test_audit_page_has_timestamp_origin_status(env):
     client,_=env
     html=client.get("/auditoria").get_data(as_text=True)
-    assert "Horário (UTC)" in html
+    assert "Horário (Brasília)" in html
     assert "Origem / Quem fez" in html
     assert "Status" in html
