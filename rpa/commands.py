@@ -6,6 +6,12 @@ FIELDS = {
     "criar_produto": ("sku", "produto", "quantidade", "preco"),
     "definir_estoque": ("sku", "quantidade"),
     "consultar_estoque": ("sku",),
+    "listar_pedidos": (),
+    "listar_produtos": (),
+    "resumo_erp": (),
+    "excluir_pedido": ("pedido_id",),
+    "excluir_produto": ("sku",),
+    "atualizar_produto": ("sku", "produto", "quantidade", "preco"),
 }
 REQUIRED = {
     "criar_pedido": ("pedido_id", "cliente", "produto", "quantidade", "valor_unitario"),
@@ -13,10 +19,17 @@ REQUIRED = {
     "criar_produto": ("sku", "produto", "quantidade", "preco"),
     "definir_estoque": ("sku", "quantidade"),
     "consultar_estoque": ("sku",),
+    "listar_pedidos": (),
+    "listar_produtos": (),
+    "resumo_erp": (),
+    "excluir_pedido": ("pedido_id",),
+    "excluir_produto": ("sku",),
+    "atualizar_produto": ("sku",),
 }
 OPTIONAL = {
     "criar_pedido": ("status", "cep"),
     "atualizar_pedido": ("cliente", "produto", "quantidade", "valor_unitario", "status", "cep"),
+    "atualizar_produto": ("produto", "quantidade", "preco"),
 }
 LABELS = {"pedido_id":"ID do pedido","cliente":"Cliente","produto":"Produto","quantidade":"Quantidade","valor_unitario":"Valor unitário (R$)","status":"Status","cep":"CEP","sku":"SKU","preco":"Preço (R$)"}
 
@@ -32,7 +45,7 @@ def validate_command(proposal):
     data = {key: str(raw[key]).strip() for key in FIELDS[action] if raw.get(key) is not None}
     if action == "criar_pedido" and not data.get("status"):
         data["status"] = "pendente"
-    if action == "atualizar_pedido" and not any(k in data for k in FIELDS[action] if k != "pedido_id"):
+    if action in ("atualizar_pedido", "atualizar_produto") and not any(k in data for k in FIELDS[action] if k != ("pedido_id" if action == "atualizar_pedido" else "sku")):
         missing = ["campo_para_atualizar"]
     else:
         missing = [key for key in REQUIRED[action] if not data.get(key)]
