@@ -8,7 +8,7 @@
 <a href="/estoque" class="{{ 'active' if section=='estoque' else '' }}">{{ nav_icon('stock') }}Estoque</a>
 <a href="/controle" class="{{ 'active' if section=='chat' else '' }}">{{ nav_icon('chat') }}Chat ADM</a>
 <a href="/auditoria" class="{{ 'active' if section=='auditoria' else '' }}">{{ nav_icon('history') }}Auditoria</a>
-</nav></div><div><div class="nav-label">Operações manuais</div><nav class="side-nav"><a href="/" class="{{ 'active' if section=='cadastro' else '' }}">{{ nav_icon('plus') }}Gerenciar pedidos</a></nav></div>
+</nav></div><div><div class="nav-label">Operações manuais</div><nav class="side-nav"><a href="/pedidos/gerenciar" class="{{ 'active' if section=='cadastro' else '' }}">{{ nav_icon('plus') }}Gerenciar pedidos</a></nav></div>
 <div class="side-foot"><div class="identity"><div class="avatar">AD</div><div><strong>Administrador</strong><small>ADM · Ambiente local</small></div></div><p style="font-size:11px;color:var(--muted);margin:12px 0 0">⚠ Perfil demonstrativo, sem autenticação real.</p></div>
 </aside><div class="workspace"><header class="topbar"><div><div class="crumb">WORKSPACE / {{ page_name|default('Visão geral') }}</div><strong style="font-size:14px">RPA LAB <span style="color:var(--cyan)">/</span> {{ page_name|default('Dashboard') }}</strong></div><div class="top-actions"><span class="online">● Sistema local</span><time id="clock"></time><span class="avatar" style="width:30px;height:30px;border-radius:9px">AD</span></div></header>
 <main class="page">{% with messages=get_flashed_messages(with_categories=true) %}{% for category,msg in messages %}<div role="alert" class="flash {{ category }}">{{ msg }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main></div></div>
