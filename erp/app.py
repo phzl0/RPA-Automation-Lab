@@ -44,6 +44,10 @@ def create_app(test_config=None):
     app.register_blueprint(adm)
 
     @app.get("/")
+    def home():
+        return redirect(url_for("adm.dashboard"))
+
+    @app.get("/pedidos/gerenciar")
     def index():
         with connect() as db:
             pedidos = db.execute("SELECT * FROM pedidos ORDER BY pedido_id").fetchall()
