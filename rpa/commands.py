@@ -10,7 +10,7 @@ FIELDS = {
     "listar_pedidos": (),
     "listar_produtos": (),
     "resumo_erp": (),
-    "excluir_pedido": ("pedido_id",),
+    "excluir_pedido": ("pedido_id", "referencia"),
     "excluir_produto": ("sku",),
     "atualizar_produto": ("sku", "produto", "quantidade", "preco"),
 }
@@ -23,7 +23,7 @@ REQUIRED = {
     "listar_pedidos": (),
     "listar_produtos": (),
     "resumo_erp": (),
-    "excluir_pedido": ("pedido_id",),
+    "excluir_pedido": (),
     "excluir_produto": ("sku",),
     "atualizar_produto": ("sku",),
 }
@@ -32,7 +32,7 @@ OPTIONAL = {
     "atualizar_pedido": ("cliente", "produto", "quantidade", "valor_unitario", "status", "cep"),
     "atualizar_produto": ("produto", "quantidade", "preco"),
 }
-LABELS = {"pedido_id":"ID do pedido","cliente":"Cliente","produto":"Produto","quantidade":"Quantidade","valor_unitario":"Valor unitário (R$)","status":"Status","cep":"CEP","sku":"SKU","preco":"Preço (R$)"}
+LABELS = {"pedido_id":"ID do pedido","cliente":"Cliente","produto":"Produto","quantidade":"Quantidade","valor_unitario":"Valor unitário (R$)","status":"Status","referencia":"Referência de pedido/cliente","cep":"CEP","sku":"SKU","preco":"Preço (R$)"}
 
 def validate_command(proposal):
     if not isinstance(proposal, dict):
@@ -44,6 +44,8 @@ def validate_command(proposal):
     if not isinstance(raw, dict):
         raise ValueError("Dados inválidos.")
     data = {key: str(raw[key]).strip() for key in FIELDS[action] if raw.get(key) is not None}
+    if action == "excluir_pedido" and not (data.get("pedido_id") or data.get("referencia")):
+        return {"action":action,"data":data,"missing":["referencia"],"ready":False}
     if action == "criar_pedido" and not data.get("pedido_id"):
         data["pedido_id"] = "PED-" + uuid4().hex[:10].upper()
     if action == "criar_pedido" and not data.get("status"):
