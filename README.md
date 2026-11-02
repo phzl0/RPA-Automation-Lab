@@ -44,7 +44,7 @@ sudo bash scripts/docker-up.sh
 
 O script preserva os dados: se existir `erp.sqlite3` na raiz do projeto e ainda não existir `storage/erp.sqlite3`, copia o banco antigo. O novo banco é persistido em `./storage/erp.sqlite3`, no host. A migração do ERP adiciona a coluna `cep` sem apagar pedidos antigos. Os arquivos de `.env`, `storage`, `reports` e `screenshots` não entram na imagem.
 
-Abra **http://127.0.0.1:5000/adm** para o painel ADM, **http://127.0.0.1:5000/pedidos/lista** para pedidos, **http://127.0.0.1:5000/produtos** para produtos, **http://127.0.0.1:5000/** para cadastro manual, **http://127.0.0.1:5000/estoque** para estoque manual e **http://127.0.0.1:5000/controle** para o chat ADM.
+Abra **http://127.0.0.1:5000/** (ou **http://127.0.0.1:5000/adm**) para o painel ADM, **http://127.0.0.1:5000/pedidos/lista** para pedidos, **http://127.0.0.1:5000/produtos** para produtos, **http://127.0.0.1:5000/pedidos/gerenciar** para cadastro manual, **http://127.0.0.1:5000/estoque** para estoque manual e **http://127.0.0.1:5000/controle** para o chat ADM.
 
 ## CLI interativa pelo Docker
 
@@ -93,7 +93,7 @@ Não rode `sudo docker compose down -v` para apagar volumes de propósito, nem e
 
 `erp/app.py`: Flask e SQLite; `rpa/interpreter.py`: interpretação do Gemini; `rpa/commands.py`: validação de operações; `rpa/interactive.py`: interação com navegador Playwright; `rpa/cli.py`: conversa interativa e confirmação; `rpa/robot.py`: execução CSV/XLSX; `tests/`: testes automatizados.
 
-No novo pedido, `pedido_id`, cliente, produto, quantidade e valor unitário são obrigatórios. Status (padrão `pendente`) e CEP são opcionais; quando omitido, CEP fica `NULL`. Pode-se atualizar o CEP ou limpá-lo posteriormente. O ERP é um laboratório local, sem autenticação, e **o chat web não executa alterações diretamente**.
+No novo pedido, `pedido_id`, cliente, produto, quantidade e valor unitário são obrigatórios. Status (padrão `pendente`) e CEP são opcionais; quando omitido, CEP fica `NULL`. Pode-se atualizar o CEP ou limpá-lo posteriormente. O ERP é um laboratório local, sem autenticação; o chat web permite enviar operações validadas ao Playwright após confirmação explícita.
 
 ## Estado dos testes
 
@@ -127,3 +127,30 @@ O mesmo tipo de confirmação interna substitui os alertas de exclusão dos form
 **Limites:** consulta parcial (sem correspondência fonética/semântica avançada), até 20 resultados por busca, busca restrita aos primeiros 2.000 pedidos do laboratório. A exclusão não ocorre se o pedido não for encontrado. Não há exclusão em massa. Consultas e confirmação são realizadas sobre dados reais; o Gemini não deve inventar registros encontrados.
 
 Após atualizar com `git pull --ff-only origin main`, recrie o Docker usando `sudo bash scripts/docker-up.sh`, rode `sudo bash scripts/docker-check.sh` e atualize o navegador com `Ctrl+Shift+R`.
+
+
+## Upgrade de interface administrativa (Dark Neon)
+
+A URL raiz `http://127.0.0.1:5000/` agora redireciona para o **Dashboard ADM**. Todos os módulos renderizam o template reutilizável `erp/templates/base.html` e o tema compartilhado `erp/static/admin.css` (preto grafite, ciano, violeta, toques neon). A navegação é vertical à esquerda, com perfil ADM demonstrativo, topbar, status local e relógio.
+
+**Navegação:** Dashboard `/adm` · Pedidos `/pedidos/lista` · Produtos `/produtos` · Estoque `/estoque` · Chat ADM `/controle` · Auditoria `/auditoria` · Configurações `/configuracoes` · Gerenciar pedidos manualmente `/pedidos/gerenciar`.
+
+**Dashboard conectado ao SQLite:** total de pedidos, valor bruto (quantidade × preço), produtos, estoque baixo (≤5), pedidos pendentes e concluídos, conversas salvas, ações manuais, execuções e falhas RPA; últimos pedidos, monitor de estoque, atividades recentes e atalhos rápidos. O filtro de texto nas listagens de pedidos/produtos funciona no navegador.
+
+**Rastreabilidade:** `erp/metrics.py` cria automaticamente a tabela `activity_log` no SQLite existente e registra cadastros, alterações e exclusões manuais concluídos. As execuções do RPA aparecem por meio da tabela preexistente `rpa_audit`, separadas da atividade manual. Os registros são armazenados em UTC e apresentados no horário de Brasília (`America/Sao_Paulo`), com origem, status e detalhes. As atividades anteriores à implementação da auditoria manual não podem ser reconstruídas retroativamente. Não existe identidade real de operador: `ADM (manual)` e `RPA (assistido)` são rótulos de origem, não contas autenticadas.
+
+**Compatibilidade do robô:** o Playwright para pedidos foi atualizado para o caminho `/pedidos/gerenciar` e os campos do robô CSV/XLSX foram delimitados ao formulário correto; as rotas de gravação existentes continuam disponíveis. O SQLite e o histórico de conversas continuam persistidos em `storage/erp.sqlite3`.
+
+Para atualizar no Ubuntu, sem `.venv`:
+
+```bash
+cd ~/Projetos/RPA-Automation-Lab
+git status --short
+git pull --ff-only origin main
+sudo bash scripts/docker-up.sh
+sudo bash scripts/docker-check.sh
+```
+
+Se `git pull` acusar modificações locais, guarde-as antes de atualizar; não use `git reset --hard` nem apague `storage/erp.sqlite3`. Após reconstruir, atualize o navegador com `Ctrl+Shift+R`.
+
+O sistema permanece **exclusivamente um laboratório**: sem autenticação ou perfis reais, sem proteções completas contra CSRF, e sem restauração automática após exclusões. Não use em produção.
