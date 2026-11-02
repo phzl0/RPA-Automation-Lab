@@ -9,5 +9,8 @@ echo "=== Saudação sem rede/sem API ==="
 docker compose exec -T erp python -c "from rpa.interpreter import interpret; result=interpret('bom dia'); print(result); assert result['kind']=='chat' and result.get('action') is None"
 echo "=== Coluna CEP e banco utilizado ==="
 docker compose exec -T erp python -c "import os, sqlite3; p=os.environ['ERP_DB_PATH']; db=sqlite3.connect(p); print('BD:',p); print('Campos:',[r[1] for r in db.execute('PRAGMA table_info(pedidos)')]); assert 'cep' in [r[1] for r in db.execute('PRAGMA table_info(pedidos)')]"
+echo "=== Painel ADM, Dashboard e Auditoria ==="
+docker compose exec -T erp python -c "import urllib.request; root='http://127.0.0.1:5000'; paths=['/','/adm','/pedidos/gerenciar','/pedidos/lista','/produtos','/estoque','/controle','/auditoria','/configuracoes']; [(lambda response: print(path, response.status, response.geturl()))(urllib.request.urlopen(root+path,timeout=5)) for path in paths]"
+docker compose exec -T erp python -c "import os; from erp.metrics import metrics; data=metrics(os.environ['ERP_DB_PATH']); print('Métricas:', data['totals']); print('Atividades recentes:', len(data['activity']))"
 echo "=== Testes ==="
 docker compose exec -T erp python -m pytest -q
