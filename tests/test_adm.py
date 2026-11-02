@@ -44,12 +44,16 @@ def test_rpa_rejects_missing_fields(client):
     execute.assert_not_called()
 
 def test_rpa_confirmed_dispatch(client):
-    http,_=client
-    cmd={"action":"excluir_pedido","data":{"pedido_id":"P-01"}}
+    http,app=client
+    http.post("/pedidos",data={"pedido_id":"P-01","cliente":"Teste 10","produto":"Mouse","quantidade":"1","valor_unitario":"15","status":"pendente"})
+    with sqlite3.connect(app.config["DATABASE"]) as db:
+        db.row_factory=sqlite3.Row
+        row=dict(db.execute("SELECT * FROM pedidos WHERE pedido_id='P-01'").fetchone())
+    cmd={"action":"excluir_pedido","data":{"referencia":"Teste 10"}}
     with patch("rpa.interactive.run_command",return_value="Excluído.") as execute:
-        response=http.post("/api/rpa/execute",json={"command":cmd,"confirm":"SIM"})
+        response=http.post("/api/rpa/execute",json={"command":cmd,"selected_order":row,"confirm":"SIM"})
     assert response.status_code==200
-    execute.assert_called_once()
+    assert execute.call_args.args[0]["data"]["pedido_id"]=="P-01"
 
 def test_manual_product_update_delete(client):
     http,app=client
