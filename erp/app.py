@@ -31,6 +31,11 @@ def create_app(test_config=None):
             quantidade INTEGER NOT NULL CHECK(quantidade >= 0),
             preco REAL NOT NULL CHECK(preco >= 0 AND preco <= 100000000))""")
 
+    from erp.chat_store import init_chat
+    from erp.adm_routes import adm
+    init_chat(app.config["DATABASE"])
+    app.register_blueprint(adm)
+
     @app.get("/")
     def index():
         with connect() as db:
