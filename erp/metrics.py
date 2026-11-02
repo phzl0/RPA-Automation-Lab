@@ -6,6 +6,7 @@ O usuário exibido é uma origem funcional, não uma identidade autenticada.
 import sqlite3
 import json
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 def initialize(db_path):
     with sqlite3.connect(db_path,timeout=15) as db:
@@ -44,8 +45,15 @@ def recent(db_path,limit=30):
         '' AS entity_id,'rpa' AS source,'RPA (assistido)' AS actor_label,status,
         COALESCE(detail,'') AS detail
         FROM rpa_audit ORDER BY id DESC LIMIT ?""",(min(limit,100),))]
-    for e in events: e["origin"]="manual"
-    for e in legacy: e["origin"]="rpa"
+    def enrich(item, origin):
+        item["origin"] = origin
+        try:
+            parsed = datetime.strptime(item["occurred_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            item["occurred_local"] = parsed.astimezone(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S")
+        except (TypeError, ValueError):
+            item["occurred_local"] = item["occurred_at"] or "—"
+    for e in events: enrich(e, "manual")
+    for e in legacy: enrich(e, "rpa")
     return sorted(events+legacy,key=lambda e:(e["occurred_at"] or ""),reverse=True)[:limit]
 
 def metrics(db_path):
