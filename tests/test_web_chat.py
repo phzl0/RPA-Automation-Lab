@@ -18,7 +18,7 @@ def test_cep_visible_and_nullable_on_existing_database(tmp_path):
         db.execute("INSERT INTO pedidos VALUES ('ANTIGO','Ana','Mouse',1,20,'pendente')")
     app = create_app({"TESTING": True, "DATABASE": str(filename)})
     client = app.test_client()
-    html = client.get("/").get_data(as_text=True)
+    html = client.get("/pedidos/gerenciar").get_data(as_text=True)
     assert 'name="cep"' in html
     assert "<th>CEP</th>" in html
     with sqlite3.connect(filename) as db:
