@@ -149,6 +149,55 @@ def create_app(test_config=None):
             flash("Quantidade inválida.", "error")
         return redirect(url_for("estoque"))
 
+    @app.post("/pedidos/excluir")
+    def excluir_pedido():
+        ident=request.form.get("pedido_id","").strip()
+        if not ident:
+            flash("Informe o ID do pedido.","error")
+            return redirect(url_for("index"))
+        with connect() as db:
+            changed=db.execute("DELETE FROM pedidos WHERE pedido_id=?",(ident,)).rowcount
+        flash("Pedido excluído." if changed else "Pedido não encontrado.","success" if changed else "error")
+        return redirect(url_for("index"))
+
+    @app.post("/estoque/editar")
+    def editar_produto():
+        sku=request.form.get("sku","").strip()
+        changes={}
+        for field in ("produto","quantidade","preco"):
+            if field not in request.form or not request.form[field].strip():
+                continue
+            value=request.form[field].strip()
+            try:
+                if field=="quantidade":
+                    value=int(value)
+                    if value<0: raise ValueError()
+                elif field=="preco":
+                    value=float(value)
+                    if not 0<=value<=100000000: raise ValueError()
+            except (ValueError,OverflowError):
+                flash("Valores inválidos.","error")
+                return redirect(url_for("estoque"))
+            changes[field]=value
+        if not sku or not changes:
+            flash("Informe SKU e pelo menos uma alteração.","error")
+            return redirect(url_for("estoque"))
+        with connect() as db:
+            changed=db.execute("UPDATE estoque SET "+",".join(k+"=?" for k in changes)+" WHERE sku=?",(*changes.values(),sku)).rowcount
+        flash("Produto atualizado." if changed else "SKU não encontrado.","success" if changed else "error")
+        return redirect(url_for("estoque"))
+
+    @app.post("/estoque/excluir")
+    def excluir_produto():
+        sku=request.form.get("sku","").strip()
+        if not sku:
+            flash("Informe o SKU.","error")
+            return redirect(url_for("estoque"))
+        with connect() as db:
+            changed=db.execute("DELETE FROM estoque WHERE sku=?",(sku,)).rowcount
+        flash("Produto excluído." if changed else "SKU não encontrado.","success" if changed else "error")
+        return redirect(url_for("estoque"))
+
     @app.get("/controle")
     def controle():
         return render_template("controle.html")
