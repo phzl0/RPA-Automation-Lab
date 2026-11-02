@@ -1,6 +1,6 @@
 # RPA Automation Lab — Docker
 
-Projeto de aprendizado: **Flask + SQLite local + Gemini + Playwright**. ERP demonstrativo, controle de estoque, cadastro/atualização de pedidos, chat com IA e automação pela interface gráfica (sem API de gravação). **Não utilizar dados reais.**
+Projeto de aprendizado: **Flask + SQLite local + Gemini + Playwright**, com painel ADM e histórico de conversas compartilhado entre CLI e web. ERP demonstrativo, controle de estoque, cadastro/atualização de pedidos, chat com IA e automação pela interface gráfica (sem API de gravação). **Não utilizar dados reais.**
 
 ## Requisitos
 - Ubuntu com Docker Engine e Docker Compose plugin funcionando (`sudo docker compose version`)
@@ -44,7 +44,7 @@ sudo bash scripts/docker-up.sh
 
 O script preserva os dados: se existir `erp.sqlite3` na raiz do projeto e ainda não existir `storage/erp.sqlite3`, copia o banco antigo. O novo banco é persistido em `./storage/erp.sqlite3`, no host. A migração do ERP adiciona a coluna `cep` sem apagar pedidos antigos. Os arquivos de `.env`, `storage`, `reports` e `screenshots` não entram na imagem.
 
-Abra **http://127.0.0.1:5000** para o ERP, **http://127.0.0.1:5000/estoque** para o estoque e **http://127.0.0.1:5000/controle** para o chat.
+Abra **http://127.0.0.1:5000/adm** para o painel ADM, **http://127.0.0.1:5000/pedidos/lista** para pedidos, **http://127.0.0.1:5000/produtos** para produtos, **http://127.0.0.1:5000/** para cadastro manual, **http://127.0.0.1:5000/estoque** para estoque manual e **http://127.0.0.1:5000/controle** para o chat ADM.
 
 ## CLI interativa pelo Docker
 
@@ -52,7 +52,7 @@ Abra **http://127.0.0.1:5000** para o ERP, **http://127.0.0.1:5000/estoque** par
 sudo docker compose exec -it erp python -m rpa.cli
 ```
 
-Exemplos: `bom dia`; `o que é RPA?`; `quero cadastrar um pedido`; `consulte o estoque do SKU M-01`. As conversas gerais não devem exigir SKU. Ao reconhecer uma operação ERP, a IA apresenta os campos obrigatórios e opcionais; gravações requerem `SIM` para confirmar. Use `/sair` para encerrar e `/limpar` para limpar o contexto da sessão.
+Exemplos: `bom dia`; `o que é RPA?`; `quero cadastrar um pedido`; `consulte o estoque do SKU M-01`. A CLI permite retomar conversas anteriores armazenadas no mesmo SQLite do chat do site. A interface web permite criar, abrir e excluir históricos. As conversas gerais não devem exigir SKU. Ao reconhecer uma operação ERP, a IA apresenta os campos obrigatórios e opcionais; gravações requerem `SIM` para confirmar. Use `/sair` para encerrar e `/limpar` para limpar o contexto da sessão.
 
 O Playwright roda com **Chromium headless** dentro do contêiner, sem abrir uma janela gráfica no Ubuntu; ele ainda interage com a interface web do ERP. Isso é intencional e dispensa configurar X11, DISPLAY ou servidores gráficos no host. Para executar o robô CSV:
 
@@ -98,3 +98,15 @@ No novo pedido, `pedido_id`, cliente, produto, quantidade e valor unitário são
 ## Estado dos testes
 
 Testes unitários e de integração Flask podem ser executados via `docker-check.sh`; não há garantia de teste ponta a ponta no ambiente do usuário nem de disponibilidade da API Gemini. Falhas HTTP 429/503 no Gemini não são resolvidas pelo Docker por si só.
+
+
+## Painel ADM experimental, permissões e histórico
+O banco persiste as tabelas `chat_conversations`, `chat_messages` e `rpa_audit`. O chat do navegador e a CLI compartilham o mesmo histórico, mas não usam credenciais de administradores (não existem usuários nem login nesta demonstração). O site permite ver o painel, pedidos, produtos, cadastrar manualmente e conversar com o Gemini. No chat web, ações de RPA completas podem ser revisadas e executadas sem repetir comandos no terminal. O robô utiliza Playwright no Chromium headless e os formulários reais do ERP.
+
+Operações reconhecidas: `criar_pedido`, `atualizar_pedido`, `excluir_pedido`, `criar_produto`, `atualizar_produto`, `excluir_produto`, `definir_estoque`, `consultar_estoque`, `listar_pedidos`, `listar_produtos`, `resumo_erp`. Ações de leitura usam consultas limitadas e aprovadas ao SQLite; alterações e exclusões utilizam Playwright. **Nenhuma execução de SQL arbitrário ou exclusão em massa foi concedida à IA.**
+
+**Limite importante:** permissão para executar ações administrativas não significa permissão para inventar dados. O cadastro de pedido ainda precisa de cliente, produto, quantidade e preço (e identificador exclusivo), enquanto status e CEP são opcionais; o sistema pode aproveitar dados fornecidos em linguagem natural e pedir apenas os que faltam. Gravações precisam de confirmação `SIM` na CLI, ou confirmação explícita no navegador. Ações ficam registradas em `rpa_audit`, mas exclusões não contam com lixeira/undo.
+
+⚠ **NÃO É SEGURO PARA PRODUÇÃO.** Sem autenticação, autorização por usuário, CSRF, segregação de dados, backups e auditoria antifraude, não exponha a porta na internet nem use dados reais. A interface inclui alerta propositalmente destacado. Para um ambiente real, implemente login, RBAC, confirmação de exclusões com reautenticação, transações e logs externos.
+
+Após baixar novas alterações, execute `sudo bash scripts/docker-up.sh` para reconstruir a imagem Docker e reiniciar o ERP. Execute `sudo bash scripts/docker-check.sh` para validar os testes. A disponibilidade do Gemini depende da API Google, não do Docker.
