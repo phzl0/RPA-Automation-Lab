@@ -11,13 +11,14 @@ def env(tmp_path):
 
 def test_all_admin_pages_share_sidebar(env):
     client,_=env
-    for path in ("/adm","/pedidos/lista","/produtos","/estoque","/controle","/auditoria","/"):
+    for path in ("/adm","/pedidos/lista","/produtos","/estoque","/controle","/auditoria","/pedidos/gerenciar"):
         response=client.get(path)
         assert response.status_code==200, path
         html=response.get_data(as_text=True)
         assert "RPA AUTOMATION" in html and "ADMIN CONSOLE" in html
         assert 'href="/auditoria"' in html
         assert "Administrador" in html
+    assert client.get("/").status_code==302
     css=client.get("/static/admin.css")
     assert css.status_code==200
     assert b"--cyan:" in css.data
