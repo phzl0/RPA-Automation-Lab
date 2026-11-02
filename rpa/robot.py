@@ -55,10 +55,10 @@ def execute(source, url, headless=False):
     seen = set()
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
-        page = browser.new_page()
+        page = browser.new_page(extra_http_headers={"X-RPA-Origin": "1"})
         try:
-            page.goto(url, wait_until="domcontentloaded", timeout=15000)
-            page.get_by_role("heading", name="ERP Demonstrativo").wait_for()
+            page.goto(url.rstrip("/") + "/pedidos/gerenciar", wait_until="domcontentloaded", timeout=15000)
+            page.get_by_role("heading", name="Gerenciar pedidos").wait_for()
             for index, row in enumerate(orders, 1):
                 order_id = str(row.get("pedido_id", "")).strip()
                 try:
@@ -77,7 +77,7 @@ def execute(source, url, headless=False):
                         page.locator(f'[name="{field}"]').fill(data[field])
                     page.locator('[name="status"]').select_option(data["status"])
                     page.get_by_role("button", name="Salvar pedido").click()
-                    page.get_by_role("heading", name="ERP Demonstrativo").wait_for()
+                    page.get_by_role("heading", name="Gerenciar pedidos").wait_for()
                     matching = [r for r in page.locator("tr[data-pedido-id]").all() if r.get_attribute("data-pedido-id") == order_id]
                     if len(matching) != 1:
                         raise RuntimeError("Pedido não encontrado após cadastro")
@@ -93,7 +93,7 @@ def execute(source, url, headless=False):
                         pass
                     results.append((order_id, "erro", str(exc)[:300]))
                     try:
-                        page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                        page.goto(url.rstrip("/") + "/pedidos/gerenciar", wait_until="domcontentloaded", timeout=15000)
                     except Exception:
                         pass
         finally:
