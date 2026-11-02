@@ -10,6 +10,13 @@ main{min-width:0;display:flex;flex-direction:column;height:100vh}.bar{padding:15
 .warning strong{font-size:15px}.warning p{margin:7px 0}.chat{flex:1;overflow:auto;padding:18px 7%;display:flex;flex-direction:column;gap:12px}.bubble{max-width:min(85%,720px);background:#182820;border:1px solid #2e503a;border-radius:15px;padding:12px 16px;white-space:pre-wrap;overflow-wrap:anywhere}.bubble.user{margin-left:auto;background:#23573b}.meta{font-size:11px;color:#9cc1a8;margin-bottom:4px}
 .composer{display:flex;gap:10px;padding:16px 7%;border-top:1px solid #2c4838}textarea{width:100%;height:78px;resize:vertical;padding:13px;border:1px solid #406b4e;background:#112119;color:#fff;border-radius:11px;font:inherit}
 .action{background:#14291d;border:1px solid #59896a;border-radius:12px;padding:15px;max-width:750px}.action strong{color:#aaf2bf}.action pre{white-space:pre-wrap;max-height:200px;overflow:auto}.action button{margin:5px}.muted{color:#a9bfb0}#status{font-size:12px;color:#a6c2ae}
+.modal-backdrop{position:fixed;inset:0;background:#000c;z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}
+.modal-backdrop[hidden]{display:none}.modal{background:#132219;border:1px solid #60906d;border-radius:18px;max-width:620px;width:100%;max-height:88vh;overflow:auto;padding:25px;box-shadow:0 22px 85px #0009}
+.modal h2{font-size:21px;color:#f2f9f3;margin:0 0 10px}.modal p{color:#d4e5d8}.modal .orders{display:grid;gap:9px;margin:14px 0}
+.modal .order{display:block;background:#1e3225;border:1px solid #436c4e;border-radius:10px;padding:12px;cursor:pointer;line-height:1.8}
+.modal .order:has(input:checked){border-color:#a4ecb8;background:#254934}.modal .order input{margin-right:9px}
+.modal .controls{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}.modal .danger{background:#943b3b;border-color:#cb7777}
+.modal .cancel{background:#2a3c30}.modal .facts{background:#1c3023;padding:12px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:760px){.layout{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid #355443}.chat{min-height:40vh}main{height:90vh}.warning{max-height:150px}}
 </style></head><body>
 <div class="layout"><aside class="sidebar"><h1>RPA LAB <span style="color:#8ceaac">ADM</span></h1>
@@ -21,6 +28,7 @@ main{min-width:0;display:flex;flex-direction:column;height:100vh}.bar{padding:15
 <p><b>Use apenas registros fictícios e mantenha a porta acessível somente no computador local.</b> Faça backup de <code>storage/erp.sqlite3</code>. Não são permitidas exclusões em massa nem criação de dados desconhecidos inventados pela IA. Campos realmente obrigatórios continuam necessários. Confirme cada gravação depois de revisar o identificador e os valores. Este ambiente não deve ser colocado em produção.</p></section>
 <section id="chat" class="chat" aria-live="polite" role="log"></section>
 <form id="form" class="composer"><textarea id="input" placeholder="Pergunte ou ordene: liste os pedidos, atualize produto, exclua pedido P-01…" maxlength="4000" required></textarea><button id="send">Enviar</button></form></main></div>
+<div id="modal-backdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><h2 id="modal-title"></h2><p id="modal-description"></p><div id="modal-content"></div><div class="controls"><button type="button" class="cancel" id="modal-cancel">Cancelar</button><button type="button" class="danger" id="modal-confirm">Confirmar operação</button></div></section></div>
 <script>
 let active=null;const chat=document.getElementById('chat'), conversations=document.getElementById('conversations'),input=document.getElementById('input'), send=document.getElementById('send');
 async function api(url,options){const r=await fetch(url,options);const d=await r.json();if(!r.ok)throw Error(d.error||'Erro HTTP '+r.status);return d}
@@ -29,16 +37,57 @@ async function refresh(){const list=await api('/api/conversations');conversation
 async function load(id){active=id;chat.replaceChildren();const messages=await api('/api/conversations/'+encodeURIComponent(id)+'/messages');messages.forEach(m=>bubble(m.role==='user'?'Você':m.role==='system'?'RPA':'IA',m.text));if(!messages.length)bubble('IA','Como posso ajudar na administração do ERP?');await refresh()}
 async function create(){const data=await api('/api/conversations',{method:'POST'});await load(data.id)}
 document.getElementById('new').onclick=create;
-document.getElementById('del').onclick=async()=>{if(!active||!confirm('Excluir o histórico desta conversa?'))return;await api('/api/conversations/'+encodeURIComponent(active),{method:'DELETE'});active=null;await create()};
+const backdrop=document.getElementById('modal-backdrop'), titleModal=document.getElementById('modal-title'), descModal=document.getElementById('modal-description'), modalContent=document.getElementById('modal-content'), modalConfirm=document.getElementById('modal-confirm');
+function closeModal(){backdrop.hidden=true;modalContent.replaceChildren();modalConfirm.disabled=false}
+document.getElementById('modal-cancel').onclick=closeModal;
+backdrop.addEventListener('click',e=>{if(e.target===backdrop)closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!backdrop.hidden)closeModal()});
+function openModal({title,description,orders,details,confirmText,onConfirm}){
+  titleModal.textContent=title;descModal.textContent=description;modalContent.replaceChildren();
+  let chosen=null;
+  if(orders&&orders.length){
+    const list=document.createElement('div');list.className='orders';
+    orders.forEach((order,i)=>{const label=document.createElement('label');label.className='order';const radio=document.createElement('input');radio.type='radio';radio.name='selectedOrder';radio.checked=orders.length===1&&i===0;radio.onchange=()=>{chosen=order;modalConfirm.disabled=false};
+      const info=document.createElement('span');info.textContent='ID: '+order.pedido_id+' | Cliente: '+order.cliente+' | Produto: '+order.produto+' | Qtd: '+order.quantidade+' | R$ '+order.valor_unitario+' | Status: '+order.status+' | CEP: '+(order.cep||'não informado');
+      label.append(radio,info);list.append(label)});
+    modalContent.append(list);chosen=orders.length===1?orders[0]:null;
+  }else if(details){const info=document.createElement('div');info.className='facts';info.textContent=JSON.stringify(details,null,2);modalContent.append(info)}
+  modalConfirm.textContent=confirmText||'Confirmar operação';modalConfirm.disabled=Boolean(orders&&orders.length>1);
+  modalConfirm.onclick=()=>{if(orders&&!chosen)return;closeModal();onConfirm(chosen)};
+  backdrop.hidden=false;document.getElementById('modal-cancel').focus();
+}
+document.getElementById('del').onclick=()=>{if(!active)return;openModal({title:'Excluir conversa?',description:'O histórico será apagado do SQLite. Isso não exclui pedidos.',confirmText:'Excluir histórico',onConfirm:async()=>{try{await api('/api/conversations/'+encodeURIComponent(active),{method:'DELETE'});active=null;await create()}catch(e){bubble('Sistema',e.message)}}})};
+
 input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('form').requestSubmit()}});
-function actionCard(command,id){const box=document.createElement('div');box.className='action';const title=document.createElement('strong');title.textContent='Operação RPA: '+command.action.replaceAll('_',' ');box.append(title);
-const pre=document.createElement('pre');pre.textContent=JSON.stringify(command.data,null,2);box.append(pre);
-if(!command.ready){const p=document.createElement('p');p.textContent='Complete os campos abaixo para liberar o comando:';box.append(p);(command.missing||[]).forEach(field=>{if(field==='campo_para_atualizar'){const info=document.createElement('p');info.textContent='Informe qual atributo deseja atualizar em uma nova mensagem.';box.append(info);return;}const row=document.createElement('label');row.style.display='block';row.textContent=field.replaceAll('_',' ')+' ';const inp=document.createElement('input');inp.placeholder=field;inp.style.cssText='background:#101c14;color:#fff;border:1px solid #456c52;border-radius:7px;padding:8px;margin:5px';inp.oninput=()=>{command.data[field]=inp.value;};row.append(inp);box.append(row)});const validate=document.createElement('button');validate.textContent='Revisar dados';validate.onclick=()=>{box.remove();actionCard({...command,ready:true,missing:[]},id)};box.append(validate)}
-else{const b=document.createElement('button');b.textContent=command.action==='consultar_estoque'?'Consultar via navegador':'Revisar e executar RPA';b.onclick=async()=>{
-const writing=command.action!=='consultar_estoque';
-if(writing&&!confirm('AMBIENTE DE TESTE: confirma esta alteração no ERP?\n'+JSON.stringify(command.data,null,2)))return;
-b.disabled=true;try{const result=await api('/api/rpa/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:id,command,confirm:writing?'SIM':null})});bubble('RPA',result.result);await refresh()}catch(err){bubble('Sistema','Erro na execução: '+err.message)}finally{b.disabled=false}};box.append(b)}
-chat.append(box);chat.scrollTop=chat.scrollHeight}
+async function executeCommand(command,id,selectedOrder=null){
+  try{const result=await api('/api/rpa/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:id,command,selected_order:selectedOrder,confirm:command.action==='consultar_estoque'?null:'SIM'})});bubble('RPA',result.result);await refresh()}
+  catch(err){bubble('Sistema','Execução não realizada: '+err.message)}
+}
+async function reviewCommand(command,id){
+  if(command.action==='excluir_pedido'){
+    try{
+      const found=await api('/api/orders/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command})});
+      const options=found.status==='resolved'?[found.order]:found.candidates||[];
+      if(!options.length){bubble('IA',found.status==='missing'?'Informe o ID ou nome do cliente para pesquisar o pedido.':'Nenhum pedido encontrado para a referência informada. Nada foi excluído.');return}
+      openModal({title:options.length===1?'Confirmar exclusão do pedido':'Selecione qual pedido deseja excluir',description:options.length===1?'Encontrei o pedido abaixo no ERP. Confira todos os dados antes de excluir.':'Encontrei '+options.length+' pedidos. Selecione exatamente um registro; nenhum será excluído automaticamente.',orders:options,confirmText:'Excluir pedido selecionado',onConfirm:selected=>executeCommand(command,id,selected)});
+    }catch(err){bubble('Sistema','Falha ao localizar pedido: '+err.message)}
+    return;
+  }
+  const writing=command.action!=='consultar_estoque';
+  if(!writing){await executeCommand(command,id);return}
+  openModal({title:'Confirmar alteração no ERP',description:'Confira os dados extraídos pelo Gemini. A alteração será realizada pelo Playwright.',details:{operacao:command.action,...command.data},confirmText:'Executar operação',onConfirm:()=>executeCommand(command,id)});
+}
+function actionCard(command,id){
+  const box=document.createElement('div');box.className='action';const title=document.createElement('strong');title.textContent='Operação RPA: '+command.action.replaceAll('_',' ');box.append(title);
+  const pre=document.createElement('pre');pre.textContent=JSON.stringify(command.data,null,2);box.append(pre);
+  if(!command.ready){
+    const p=document.createElement('p');p.textContent='Campos necessários: '+command.missing.join(', ')+'. Complete os dados antes de executar.';box.append(p);
+    if(command.action==='excluir_pedido'){const field=document.createElement('input');field.placeholder='ID ou nome do cliente';field.style.cssText='padding:10px;background:#14251a;color:white;border:1px solid #456c52;border-radius:8px';field.oninput=()=>{command.data.referencia=field.value};box.append(field);const b=document.createElement('button');b.textContent='Pesquisar pedido';b.onclick=()=>reviewCommand(command,id);box.append(b)}
+  }else{
+    const b=document.createElement('button');b.textContent=command.action==='excluir_pedido'?'Pesquisar e revisar pedido':command.action==='consultar_estoque'?'Consultar estoque':'Revisar e executar RPA';b.onclick=()=>reviewCommand(command,id);box.append(b);
+  }
+  chat.append(box);chat.scrollTop=chat.scrollHeight
+}
 document.getElementById('form').onsubmit=async e=>{e.preventDefault();const text=input.value.trim();if(!text)return;send.disabled=true;input.value='';bubble('Você',text);const pending=bubble('IA','Interpretando a solicitação…');
 try{const d=await api('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,conversation_id:active})});active=d.conversation_id;pending.textContent=d.reply||'Solicitação interpretada.';if(d.result!==undefined)bubble('ERP',JSON.stringify(d.result,null,2));if(d.command&&d.command.action!=='resumo_erp'&&d.command.action!=='listar_pedidos'&&d.command.action!=='listar_produtos')actionCard(d.command,active);await refresh()}catch(err){pending.textContent='Falha: '+err.message}finally{send.disabled=false;input.focus()}};
 (async()=>{try{const all=await api('/api/conversations');if(all.length){await load(all[0].id)}else{await create()}}catch(err){bubble('Sistema','Não foi possível carregar histórico: '+err.message)}})();
