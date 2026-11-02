@@ -65,8 +65,9 @@ def run_command(command, headless=False):
                     raise ValueError("Pedido não encontrado; nada foi excluído.")
                 form=page.locator('form[action="/pedidos/excluir"]')
                 form.locator('[name="pedido_id"]').fill(data["pedido_id"])
-                page.once("dialog",lambda dialog: dialog.accept())
                 form.get_by_role("button", name="Excluir pedido").click()
+                page.locator("#erp-confirm").wait_for(state="visible")
+                page.locator("#erp-confirm-accept").click()
                 if any(r.get_attribute("data-pedido-id")==data["pedido_id"] for r in page.locator("tr[data-pedido-id]").all()):
                     raise RuntimeError("Exclusão não confirmada na interface.")
                 return "Pedido excluído e conferido: "+data["pedido_id"]
@@ -76,8 +77,9 @@ def run_command(command, headless=False):
                     raise ValueError("Produto não encontrado; nada foi excluído.")
                 form=page.locator('form[action="/estoque/excluir"]')
                 form.locator('[name="sku"]').fill(data["sku"])
-                page.once("dialog",lambda dialog: dialog.accept())
                 form.get_by_role("button", name="Excluir produto").click()
+                page.locator("#erp-confirm").wait_for(state="visible")
+                page.locator("#erp-confirm-accept").click()
                 if any(r.get_attribute("data-sku")==data["sku"] for r in page.locator("tr[data-sku]").all()):
                     raise RuntimeError("Exclusão não confirmada na interface.")
                 return "Produto excluído e conferido: "+data["sku"]
