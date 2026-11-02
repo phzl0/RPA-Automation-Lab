@@ -10,9 +10,9 @@ from erp.chat_store import init_chat, new_conversation, list_conversations, get_
 from erp.adm import rows, overview
 
 def say(label, text):
-    colors = {"IA >": "\\033[92m", "RPA >": "\\033[93m", "ERP >": "\\033[96m", "Sistema >": "\\033[91m"}
-    color = colors.get(label, "\\033[90m")
-    print("\\n" + color + "● " + label + "\\033[0m  " + str(text), flush=True)
+    colors = {"IA >": "\033[92m", "RPA >": "\033[93m", "ERP >": "\033[96m", "Sistema >": "\033[91m"}
+    color = colors.get(label, "\033[90m")
+    print("\n" + color + "● " + label + "\033[0m  " + str(text), flush=True)
 
 def main():
     parser=argparse.ArgumentParser(description="Chat ADM com histórico persistente")
