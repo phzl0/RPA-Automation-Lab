@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% set section="configuracoes" %}{% set page_name="Configurações" %}{% block title %}Configurações | RPA LAB{% endblock %}{% block content %}
+<div class="page-head"><div><div class="eyebrow">Workspace / Ambiente</div><h1>Configurações do laboratório</h1><p class="muted">Informações de execução, segurança e manutenção do ambiente local.</p></div></div>
+<div class="panel-grid">
+<section class="card"><div class="section-title"><h2>Ambiente do sistema</h2><span class="tag success">● Local</span></div><table><tbody><tr><td>Perfil atual</td><td><strong>ADM demonstrativo</strong></td></tr><tr><td>Motor da aplicação</td><td>Flask + Python</td></tr><tr><td>Persistência</td><td>SQLite · {{ db_name }}</td></tr><tr><td>Modelo Gemini configurado</td><td>{{ model }}</td></tr><tr><td>Automação</td><td>Playwright · Chromium (Docker)</td></tr><tr><td>Horário de exibição</td><td>America/Sao_Paulo</td></tr></tbody></table></section>
+<section class="card"><div class="section-title"><h2>Rotinas de administração</h2><span class="tag">Docker</span></div><p class="muted">Após alterações no código, reconstrua a imagem. Os dados são mantidos no volume local.</p><pre style="white-space:pre-wrap;background:#0b121b;padding:14px;border:1px solid var(--line);border-radius:11px;color:var(--cyan)">sudo bash scripts/docker-up.sh
+sudo bash scripts/docker-check.sh
+sudo docker compose logs --tail=100 erp</pre><p class="muted">Banco: <code>storage/erp.sqlite3</code>. Credenciais ficam no arquivo <code>.env</code>, que não deve ser enviado ao GitHub.</p></section>
+</div>
+<div class="notice" style="margin-top:18px"><strong>⚠ Segurança do laboratório</strong><p>Esta página é informativa e não altera credenciais. Não há autenticação nem autorização por usuário. O nome ADM indica apenas o ambiente de demonstração; a auditoria distingue operações manuais e RPA, mas não identifica pessoas reais. Utilize dados fictícios e não publique a porta 5000 externamente.</p></div>
+{% endblock %}
