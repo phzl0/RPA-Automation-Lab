@@ -11,7 +11,7 @@ def env(tmp_path):
 
 def test_all_admin_pages_share_sidebar(env):
     client,_=env
-    for path in ("/adm","/pedidos/lista","/produtos","/estoque","/controle","/auditoria","/pedidos/gerenciar"):
+    for path in ("/adm","/pedidos/lista","/produtos","/estoque","/controle","/auditoria","/configuracoes","/pedidos/gerenciar"):
         response=client.get(path)
         assert response.status_code==200, path
         html=response.get_data(as_text=True)
