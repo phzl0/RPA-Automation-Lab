@@ -110,3 +110,20 @@ Operações reconhecidas: `criar_pedido`, `atualizar_pedido`, `excluir_pedido`, 
 ⚠ **NÃO É SEGURO PARA PRODUÇÃO.** Sem autenticação, autorização por usuário, CSRF, segregação de dados, backups e auditoria antifraude, não exponha a porta na internet nem use dados reais. A interface inclui alerta propositalmente destacado. Para um ambiente real, implemente login, RBAC, confirmação de exclusões com reautenticação, transações e logs externos.
 
 Após baixar novas alterações, execute `sudo bash scripts/docker-up.sh` para reconstruir a imagem Docker e reiniciar o ERP. Execute `sudo bash scripts/docker-check.sh` para validar os testes. A disponibilidade do Gemini depende da API Google, não do Docker.
+
+
+## Resolução de pedidos por nome e confirmação visual própria
+
+Exemplo: `exclua o pedido teste 10`, quando o cliente `teste 10` pertence ao pedido de ID `10`.
+
+1. Gemini identifica a intenção e envia uma referência textual, sem presumir que ela é o ID.
+2. O backend pesquisa em SQLite por ID e nome de cliente, priorizando coincidências exatas. Se houver várias correspondências, apresenta os pedidos para seleção manual.
+3. O Chat ADM exibe uma **janela de confirmação do próprio sistema** (sem `window.confirm()`) mostrando o ID real, o cliente, o produto, o valor, a quantidade e o status.
+4. O servidor confere novamente a identidade e os dados do pedido selecionado no SQLite antes de enviar o ID resolvido ao Playwright. Se houver mudança, rejeita e exige nova pesquisa.
+5. O Playwright interage com o formulário real de exclusão e com o diálogo interno do ERP; confere em seguida que o registro desapareceu.
+
+O mesmo tipo de confirmação interna substitui os alertas de exclusão dos formulários manuais. A CLI também consulta o banco e permite selecionar o pedido encontrado, mantendo a confirmação textual `SIM`.
+
+**Limites:** consulta parcial (sem correspondência fonética/semântica avançada), até 20 resultados por busca, busca restrita aos primeiros 2.000 pedidos do laboratório. A exclusão não ocorre se o pedido não for encontrado. Não há exclusão em massa. Consultas e confirmação são realizadas sobre dados reais; o Gemini não deve inventar registros encontrados.
+
+Após atualizar com `git pull --ff-only origin main`, recrie o Docker usando `sudo bash scripts/docker-up.sh`, rode `sudo bash scripts/docker-check.sh` e atualize o navegador com `Ctrl+Shift+R`.
